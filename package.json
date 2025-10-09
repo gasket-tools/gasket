@@ -5,8 +5,7 @@
   "type": "module",
   "bin": {
     "gasket": "./bin/gasket.js",
-    "gasket-deno": "./bin/gasket-deno.js",
-    "gasket-legacy": "./bin/gasket-legacy.js"
+    "gasket-deno": "./bin/gasket-deno.js"
   },
   "scripts": {
     "install": "node-gyp rebuild",
