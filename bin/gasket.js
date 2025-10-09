@@ -84,13 +84,12 @@ class OLAAnalysis {
     this.seenObjects = new Set();
     this.currentFile = "none";
     this.heap_jsfuncs = []
-    this.heap_jsfuncs_before = []
-    this.heap_jsfuncs_before_addresses = []
     this.heap_jsfuncs_after = []
     this.heap_jsfuncs_after_addresses = []
 
     this.heap_ids_before = []
     this.heap_ids_after = []
+    this.heap_AccessorPair_addresses = [];
   }
 
   prepare() {
@@ -162,7 +161,7 @@ class OLAAnalysis {
 
   visitObjectWasm(idxstr, jsname, jobRes) {
     const idx = parseInt(idxstr);
-	  this.wasm_state.fqn2idx[jsname] = idx;
+	this.wasm_state.fqn2idx[jsname] = idx;
     const wasm_instance_address = parseInt(extract_wasm_instance_address(
         jobRes));
     this.wasm_state.fqn2wasminstance[jsname] = wasm_instance_address;
@@ -412,7 +411,7 @@ class OLAAnalysis {
 
   resolveNativeAddresses() {
     const cbs = Array.from(this.state.cbs_set);
-    const  resolve_addresses = new Set(cbs)
+    const resolve_addresses = new Set(cbs)
 
     for (const key in this.state.fqn2overloadsaddr) {
       this.state.fqn2overloadsaddr[key].forEach(
@@ -540,10 +539,6 @@ class OLAAnalysis {
     const jsname = utils.getModuleFQN(moduleFile, pkgRoot);
     console.log(`${moduleFile}: jsname = ${jsname}`);
     this.introspect(obj, jsname);
-
-    if (this.args.profileHeap) {
-      this.analyze_heap();
-    }
     this.resolveAddresses();
   }
 
@@ -568,35 +563,136 @@ class OLAAnalysis {
       this.analyzeSingle(mod, this.args.root);
       this.stats.modules.push(mod);
     }
+    if (this.args.profileHeap) {
+      console.log('In this.args.AnalyzeHeap')
+      this.state.reset();
+      this.wasm_state.reset();
+      this.analyzeHeapAfter();
+      this.resolveAddresses();
+    }
+
   }
 
-  extractJSFunctions_before(input) {
-    const regex = /(0x[0-9a-fA-F]+)\s*<JSFunction\s+([^\s<(]+)/g;
+  isNewHeapAddr(addr) {
+    return (!this.heap_jsfuncs_after_addresses.includes(addr));
+  }
+
+  extractWasmFunctions(input) {
+    const regex = /#([^\s:]+):\s*(0x[0-9a-fA-F]+)\s*<JSFunction\s+js-to-wasm\b[^>]*/g;
     let match;
     let addr;
+    let ob;
+
     while ((match = regex.exec(input)) !== null) {
-      addr = parseInt(match[1]).toString()
-      let ob = {address: addr, name: match[2]}
-      if (!(this.heap_jsfuncs_before_addresses.includes(addr))){
-        this.heap_jsfuncs_before.push(ob);
-        this.heap_jsfuncs_before_addresses.push(addr);
+      this.stats.callable_objects += 1;
+      this.stats.objects_examined += 1;
+
+      addr = parseInt(match[2]).toString()
+      ob = {address: addr, name: match[1]}
+
+      if (this.isNewHeapAddr(addr)) {
+        this.heap_jsfuncs_after.push(ob);
+        this.heap_jsfuncs_after_addresses.push(addr);
       }
     }
   }
 
   extractJSFunctions(input) {
-    const regex = /(0x[0-9a-fA-F]+)\s*<JSFunction\s+([^\s<(]+)/g;
+    const regexAddrFirst = /(0x[0-9a-fA-F]+)\s*<JSFunction\s+([^\s<(]+)/g;
+    const regexNameFirst = /([a-zA-Z0-9_]+):\s*(0x[0-9a-fA-F]+)\s*<JSFunction/g;
+
     let match;
     let addr;
+    let ob;
+
+    // Address-first pattern
+    while ((match = regexAddrFirst.exec(input)) !== null) {
+      this.stats.callable_objects += 1;
+      this.stats.objects_examined += 1;
+
+      addr = parseInt(match[1]).toString();
+      ob = { address: addr, name: match[2] };
+
+      if (this.isNewHeapAddr(addr)) {
+        this.heap_jsfuncs_after.push(ob);
+        this.heap_jsfuncs_after_addresses.push(addr);
+      }
+    }
+
+    // Name-first pattern
+    while ((match = regexNameFirst.exec(input)) !== null) {
+      this.stats.callable_objects += 1;
+      this.stats.objects_examined += 1;
+
+      addr = parseInt(match[2]).toString();
+      ob = { address: addr, name: match[1] };
+
+      if (this.isNewHeapAddr(addr)) {
+        this.heap_jsfuncs_after.push(ob);
+        this.heap_jsfuncs_after_addresses.push(addr);
+      }
+    }
+  }
+
+  extractGetSetters(input) {
+    const regex = /(\w+):\s*(0x[0-9a-f]+)\s*<AccessorPair>/g;
+    let match;
+    let addr;
+    let ob;
+    let m;
+    let name;
+    let fqn;
+    let cfunc_addr;
+    let getter_jsfunc;
+    let setter_jsfunc;
+    let getter_cbdata;
+    let setter_cbdata;
+    let haps = [];
 
     while ((match = regex.exec(input)) !== null) {
-	    addr = parseInt(match[1]).toString()
-      let ob = {address: addr, name: match[2]}
-      if (!(this.heap_jsfuncs_after_addresses.includes(addr))) {
-        if (!(this.heap_jsfuncs_before_addresses.includes(addr))) {
-          this.heap_jsfuncs_after.push(ob);
-          this.heap_jsfuncs_after_addresses.push(addr);
+      this.stats.objects_examined += 1;
+      addr = parseInt(match[2]).toString();
+      ob = {address: addr, name: match[1]};
+      if (!(this.heap_AccessorPair_addresses.includes(addr))) {
+        haps.push(ob);
+        this.heap_AccessorPair_addresses.push(addr);
+       }
+    }
+
+    for (const hap of haps) {
+      addr = hap.address;
+      name = hap.name;
+      m = extract_ap(addr);
+      if (m.type == 'JSFunction') {
+        getter_jsfunc = m['getter'].address;
+        if (!this.seenObjects.has(getter_jsfunc) && (getter_jsfunc != null)) {
+          this.visitObjectNative(addr, name + '.' + 'GET');
         }
+        setter_jsfunc = m['setter'].address;
+        if (!this.seenObjects.has(getter_jsfunc) && (setter_jsfunc != null)) {
+            this.visitObjectNative(addr, name + '.' + 'SET');
+        }
+      }
+
+      if (m.type == 'CallbackData') {
+        getter_cbdata = m['getter'].address;
+        if (getter_cbdata != null) {
+              cfunc_addr = v8.extract_cfunc_getset(getter_cbdata);
+              fqn = name + '.' + 'GET';
+              if (cfunc_addr != 'NONE') {
+                  this.stats.foreign_callable_objects += 1;
+                  this.state.fqn2cfuncaddr[fqn] = cfunc_addr;
+              }
+          }
+          setter_cbdata = m['setter'].address
+          if (setter_cbdata != null) {
+              cfunc_addr = v8.extract_cfunc_getset(setter_cbdata);
+              fqn = name + '.' + 'SET';
+              if (cfunc_addr != 'NONE') {
+                  this.stats.foreign_callable_objects += 1;
+                  this.state.fqn2cfuncaddr[fqn] = cfunc_addr;
+              }
+          }
       }
     }
   }
@@ -604,13 +700,14 @@ class OLAAnalysis {
   analyzeHeapBefore() {
     const object_addresses = JSON.parse(v8.get_objects())
     for (const addr of object_addresses) {
+	  this.stats.objects_examined += 1
       if (!(this.heap_ids_before.includes(addr))) {
         this.heap_ids_before.push(addr)
       }
     }
   }
 
-  analyze_heap() {
+  analyzeHeapAfter() {
     const object_addresses = JSON.parse(v8.get_objects())
     for (const addr of object_addresses) {
       if (!(this.heap_ids_before.includes(addr))
@@ -618,13 +715,22 @@ class OLAAnalysis {
         this.heap_ids_after.push(addr);
       }
     }
+    console.log('after heap snapshot, object addresses = ')
+    console.log(object_addresses)
     for (const addr of this.heap_ids_after) {
       const raw = v8.job_addr(addr);
-      this.extractJSFunctions(raw);
+	  if (!this.args.nativeOnly) {
+		this.extractWasmFunctions(raw);
+	  }
+	  if (!this.args.wasmOnly) {
+		this.extractJSFunctions(raw);
+		this.extractGetSetters(raw)
+	  }
     }
     console.log(`HEAP FUNCS AFTER: ${this.heap_jsfuncs_after.length}`)
     console.log(JSON.stringify(this.heap_jsfuncs_after, null, 2))
-
+    //
+    // XXX: Visit the JSFunctions found
     const heap_jsfuncs = this.heap_jsfuncs_after
     for (const func of heap_jsfuncs) {
       const addr = func.address
@@ -719,6 +825,43 @@ function extract_exports_addr(text) {
   const m = re.exec(text);
   return m ? m[1] : null;
 }
+
+function extract_ap(addr) {
+  let text;
+  text = v8.job_addr(addr)
+  // console.log(text)
+  const getterMatch =
+    text.match(/getter:[\s\S]*?(?:___CALLBACK_DATA___(0x[0-9a-f]+)|\s*(0x[0-9a-f]+)\s*<JSFunction)/i);
+  const setterMatch =
+    text.match(/setter:[\s\S]*?(?:___CALLBACK_DATA___(0x[0-9a-f]+)|\s*(0x[0-9a-f]+)\s*<JSFunction)/i);
+
+  const getter =
+    getterMatch && (getterMatch[1] || getterMatch[2])
+      ? {
+          address: getterMatch[1] || getterMatch[2],
+          type: getterMatch[1] ? "CallbackData" : "JSFunction",
+        }
+      : { address: null, type: null };
+
+  const setter =
+    setterMatch && (setterMatch[1] || setterMatch[2])
+      ? {
+          address: setterMatch[1] || setterMatch[2],
+          type: setterMatch[1] ? "CallbackData" : "JSFunction",
+        }
+      : { address: null, type: null };
+
+  // Attach summary type for the overall pair
+  const type =
+    getter.type && setter.type
+      ? getter.type === setter.type
+        ? getter.type
+        : "Mixed"
+      : getter.type || setter.type || null;
+
+  return { getter, setter, type };
+}
+
 
 function main() {
   const args = parseArgs();

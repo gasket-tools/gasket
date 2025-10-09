@@ -34,7 +34,7 @@ export default function parseArgs() {
     .option("profile-heap", {
       alias: 'p',
       type: "boolean",
-      describe: "Enable verbose mode",
+      describe: "Profile the V8 Heap for unexported objects",
       default: false
     })
     .option("native-only", {
