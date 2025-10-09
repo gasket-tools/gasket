@@ -124,6 +124,8 @@ function parse_args() {
       }
       return true;
     })
+    .strict()
+    .showHelpOnFail(true)
     .help()
     .argv;
 }
@@ -886,7 +888,10 @@ function extract_exports_addr(text) {
 }
 
 function main() {
-  const start = Date.now();
+	if (process.argv.length <= 2) {
+		yargs.showHelp();
+		process.exit(0);
+	}
   const args = parse_args();
   const analysis = new OLAAnalysis(args);
   analysis.analyze();
