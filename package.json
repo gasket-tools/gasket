@@ -1,0 +1,34 @@
+{
+  "name": "gasket-tools",
+  "version": "0.1dev",
+  "gypfile": true,
+  "type": "module",
+  "bin": {
+    "gasket": "./bin/gasket.js",
+    "gasket-deno": "./bin/gasket-deno.js",
+    "gasket-legacy": "./bin/gasket-legacy.js"
+  },
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "rebuild": "node-gyp rebuild",
+    "build:debug": "node-gyp configure --debug && node-gyp build --debug",
+    "clean": "node-gyp clean"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./ffdir": "./src/ffdir.js",
+    "./transformer": "./src/transformer.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "dependencies": {
+    "@babel/generator": "^7.28.3",
+    "@babel/parser": "^7.28.4",
+    "@babel/traverse": "^7.28.4",
+    "@babel/types": "^7.28.4",
+    "node-addon-api": "^7.1.0",
+    "yargs": "^18.0.0"
+  }
+}

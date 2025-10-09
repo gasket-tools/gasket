@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "gasket-tools/ffdir.js": "./src/ffdir.js"
+  },
+  "tasks": {
+    "gasket": "deno run -A bin/gasket-deno.js"
+  },
+  "nodeModulesDir": "auto"
+}

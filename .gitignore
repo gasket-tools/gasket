@@ -1,0 +1,66 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.manifest
+*.spec
+.env
+.venv
+venv/
+ENV/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.mypy_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+.pyre/
+.pytype/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+
+# === Node.js / JavaScript ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+.cache/
+.next/
+out/
+*.log
+
+# Environment files
+.env
+.env.*.local
+
+# Testing
+coverage/
+.nyc_output/
+
+# Lock files (optional to ignore in monorepos)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# === OS / Editor Junk ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
