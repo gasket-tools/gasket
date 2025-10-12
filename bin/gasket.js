@@ -9,21 +9,13 @@ import { createRequire } from 'node:module';
 
 import v8 from "v8"
 
-import yargz from "yargs/yargs";
-import { hideBin  } from "yargs/helpers";
-
-import {SimplePropertyRetriever} from 'gasket-tools/ffdir';
+import * as utils from 'gasket-tools/utils';
+import parseArgs from 'gasket-tools/args';
+import dir from 'gasket-tools/ffdir';
 import transform, {revertChanges} from 'gasket-tools/transformer';
 
-const require = createRequire(import.meta.url);
-const yargs = yargz(hideBin(process.argv));
 
-let RESOLVE_SCRIPT_PATH;
-if (process.env.GASKET_ROOT) {
-  RESOLVE_SCRIPT_PATH = path.join(process.env.GASKET_ROOT, 'scripts/resolve_syms.py')
-} else {
-  RESOLVE_SCRIPT_PATH = 'resolve-syms'
-}
+const require = createRequire(import.meta.url);
 
 
 class NativeState {
@@ -74,165 +66,6 @@ const BridgeType = Object.freeze({
 })
 
 
-function parse_args() {
-  return yargs
-    .option('root', {
-      alias: 'r',
-      type: 'string',
-      description: 'Package root',
-      demandOption: false
-    })
-    .option('module', {
-      alias: 'm',
-      type: 'string',
-      description: 'Module to analyze',
-      demandOption: false
-    })
-    .option("internal", {
-      type: "boolean",
-      description: "Whether the analyzed module is an internal binding (to be used with -m)",
-      default: false
-    })
-    .option('output', {
-      alias: 'o',
-      type: 'string',
-      description: 'output file',
-    })
-    .option("profile-heap", {
-      alias: 'p',
-      type: "boolean",
-      describe: "Enable verbose mode",
-      default: false
-    })
-    .option("native-only", {
-      type: "boolean",
-      describe: "Detect only JS-to-Native bridges"
-    })
-    .option("wasm-only", {
-      type: "boolean",
-      describe: "Detect only JS-to-Wasm bridges"
-    })
-    .option("force-export", {
-      type: "boolean",
-      describe: "Force export top-level declarations in analyzed modules",
-    })
-    .conflicts("module", "root")
-    .conflicts("wasm-only", "native-only")
-    .check((argv) => {
-      if (argv.internal && !argv.module) {
-        throw new Error("--internal can only be used with --module");
-      }
-      return true;
-    })
-    .strict()
-    .showHelpOnFail(true)
-    .help()
-    .argv;
-}
-
-
-function demangle_cpp(mangled) {
-  const cmd = `c++filt '${mangled}'`;
-  try {
-    const out = execSync(cmd, { encoding: 'utf-8', shell: true });
-    return out.trim();
-  } catch (err) {
-    console.error(err);
-    throw err;
-  }
-}
-
-function dir(obj) {
-  if (obj instanceof Uint8Array) {
-    return [];
-  }
-  if (obj === null) {
-    return []
-  }
-  return SimplePropertyRetriever.getOwnAndPrototypeEnumAndNonEnumProps(obj);
-}
-
-
-function gdb_resolve(addresses) {
-  const tmp_dir = os.tmpdir();
-  const addr_file = path.join(tmp_dir, `addr_${randomUUID()}.json`);
-  const res_file = path.join(tmp_dir, `res_${randomUUID()}.json`);
-
-  const pid = process.pid
-
-	fs.writeFileSync(addr_file, JSON.stringify(addresses, null, 2));
-
-	// var cmd = `bash -c 'python3 ${RESOLVE_SCRIPT_PATH} -p ${pid} -i ${addr_file} -o ${res_file}'`
-  const args = [
-    RESOLVE_SCRIPT_PATH,
-    '-p', String(pid),
-    '-i', addr_file,
-    '-o', res_file
-  ];
-
-	var result = spawnSync('python3', args, { encoding: 'utf-8' });
-	const out = result.stdout;
-	console.log('OUT:')
-	console.log(out);
-	const err = result.stderr;
-	console.log('ERR:')
-	console.log(err);
-
-	const raw = fs.readFileSync(res_file, 'utf-8');
-  return JSON.parse(raw);
-}
-
-function get_mod_fqn(fullPath, packageRoot) {
-  const root = packageRoot == undefined ? "" : packageRoot;
-  const packageName = path.basename(root);
-  const relativePath = path.relative(root, fullPath);
-  const noExt = relativePath.replace(/\.[^/.]+$/, ''); // strip extension
-  return `${packageName}/${noExt}`;
-}
-
-
-function locateModules(packagePath, filter) {
-  const chosenFiles = [];
-
-  function walkDir(dir) {
-    const files = fs.readdirSync(dir);
-    files.forEach(file => {
-      const fullPath = path.join(dir, file);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        walkDir(fullPath); // Recursive call for directories
-      } else if (filter(file)) {
-        chosenFiles.push(path.resolve(fullPath));
-      }
-    });
-  }
-  walkDir(packagePath);
-  return chosenFiles;
-}
-
-function locateNativeModules(packagePath) {
-  return locateModules(packagePath, x => x.endsWith(".node"));
-}
-
-function locateWasmModules(packagePath) {
-  return locateModules(packagePath, x => x.endsWith(".wasm"));
-}
-
-function locateJSModules(packagePath) {
-  return locateModules(packagePath, x => x.endsWith(".js"));
-}
-
-function storeBridges(outputFile, bridges) {
-  if (outputFile !== undefined) {
-    fs.writeFileSync(outputFile, JSON.stringify(bridges, null, 2));
-    console.log(`Wrote bridges to ${outputFile}`);
-  }
-  else {
-    console.log(JSON.stringify(bridges, null, 2));
-  }
-}
-
-
 class OLAAnalysis {
   constructor(args) {
     this.args = args;
@@ -262,7 +95,7 @@ class OLAAnalysis {
 
   prepare() {
     if (this.args.forceExport && !this.args.nativeOnly) {
-      const jsFiles = locateJSModules(this.args.root);
+      const jsFiles = utils.locateJSModules(this.args.root);
       for (const jsfile of jsFiles) {
         transform(jsfile);
       }
@@ -272,7 +105,7 @@ class OLAAnalysis {
     }
 
     if (!this.args.nativeOnly) {
-      const wasmModules = locateWasmModules(this.args.root);
+      const wasmModules = utils.locateWasmModules(this.args.root);
       for (const mod of wasmModules) {
         this.analyze_wasm(mod);
       }
@@ -281,7 +114,7 @@ class OLAAnalysis {
 
   tearDown() {
     if (this.args.forceExport && !this.args.nativeOnly) {
-      const jsFiles = locateJSModules(this.args.root);
+      const jsFiles = utils.locateJSModules(this.args.root);
       for (const jsfile of jsFiles) {
         revertChanges(jsfile);
       }
@@ -289,7 +122,7 @@ class OLAAnalysis {
   }
 
   addBridge(fqn, fn, lib, type) {
-    const cb = demangle_cpp(fn)
+    const cb = utils.demangleCpp(fn)
     console.log(`Adding bridge ${fqn} to ${cb}(${lib})`)
     const b = {
       'type': type,
@@ -403,7 +236,7 @@ class OLAAnalysis {
     // Napi::ObjectWrap::ConstructorCallbackWrapper
     if (cb.includes('Napi') && cb.includes('ObjectWrap')
         && cb.includes('ConstructorCallbackWrapper')) {
-      const dem = demangle_cpp(cb)
+      const dem = utils.demangleCpp(cb)
       const cls = dem.match(/<([^>]*)>/)[1];
       let fn = cls + "::" + cls.split("::").pop();
       console.log(`fn = ${fn}`)
@@ -587,7 +420,7 @@ class OLAAnalysis {
     }
 
     if (resolve_addresses.size > 0) {
-      const res1 = gdb_resolve(Array.from(resolve_addresses))
+      const res1 = utils.resolveGDB(Array.from(resolve_addresses))
       for (let addr in res1) {
         this.state.addr2sym[addr] = res1[addr];
       }
@@ -626,7 +459,7 @@ class OLAAnalysis {
 
 
     if (resolve_addresses.size > 0) {
-      const res2 = gdb_resolve(Array.from(resolve_addresses))
+      const res2 = utils.resolveGDB(Array.from(resolve_addresses))
       for (const addr in res2) {
         const addr_dec = String(Number(addr));
         this.state.addr2sym[addr_dec] = res2[addr];
@@ -655,7 +488,7 @@ class OLAAnalysis {
     }
 
     if (resolve_addresses.size > 0) {
-      const res3 = gdb_resolve(Array.from(resolve_addresses))
+      const res3 = utils.resolveGDB(Array.from(resolve_addresses))
       for (let addr in res3) {
         const addr_dec = String(Number(addr))
         this.state.addr2sym[addr_dec] = res3[addr]
@@ -704,7 +537,7 @@ class OLAAnalysis {
     this.wasm_state.reset();
     this.currentFile = moduleFile;
     const obj = this.loadModule(moduleFile);
-    const jsname = get_mod_fqn(moduleFile, pkgRoot);
+    const jsname = utils.getModuleFQN(moduleFile, pkgRoot);
     console.log(`${moduleFile}: jsname = ${jsname}`);
     this.introspect(obj, jsname);
 
@@ -720,10 +553,10 @@ class OLAAnalysis {
     }
     const modules = [];
     if (!this.args.wasmOnly) {
-      modules.push(...locateNativeModules(this.args.root));
+      modules.push(...utils.locateNativeModules(this.args.root));
     }
     if (!this.args.nativeOnly) {
-      modules.push(...locateJSModules(this.args.root));
+      modules.push(...utils.locateJSModules(this.args.root));
     }
     return modules;
   }
@@ -892,10 +725,10 @@ function main() {
 		yargs.showHelp();
 		process.exit(0);
 	}
-  const args = parse_args();
+  const args = parseArgs();
   const analysis = new OLAAnalysis(args);
   analysis.analyze();
-  storeBridges(args.output, analysis.stats);
+  utils.storeBridges(args.output, analysis.stats);
 }
 
 main();

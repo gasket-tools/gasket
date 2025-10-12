@@ -16,6 +16,8 @@
   "exports": {
     ".": "./src/index.js",
     "./ffdir": "./src/ffdir.js",
+    "./utils": "./src/utils.js",
+    "./args": "./src/args.js",
     "./transformer": "./src/transformer.js"
   },
   "files": [
