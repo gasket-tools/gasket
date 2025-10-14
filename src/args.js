@@ -4,6 +4,10 @@ import { hideBin  } from "yargs/helpers";
 
 export default function parseArgs() {
   const yargs = yargz(hideBin(process.argv));
+	if (process.argv.length <= 2) {
+		yargs.showHelp();
+		process.exit(0);
+	}
   return yargs
     .option('root', {
       alias: 'r',

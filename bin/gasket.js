@@ -721,10 +721,6 @@ function extract_exports_addr(text) {
 }
 
 function main() {
-	if (process.argv.length <= 2) {
-		yargs.showHelp();
-		process.exit(0);
-	}
   const args = parseArgs();
   const analysis = new OLAAnalysis(args);
   analysis.analyze();
