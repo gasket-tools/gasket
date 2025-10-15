@@ -134,14 +134,24 @@ std::string extract_callback_and_overloads_json(const std::string& input) {
 Napi::Value getcb(const Napi::CallbackInfo& info) {
 	Napi::Env env = info.Env();
 	std::string msg;
-    void *jsfunc_addr;
     void *sfi_addr;
     void *fti_addr;
 
     // void *address;
-    auto new_info = (CallbackInfoPublic&)(info);
-	auto x = *(new_info._argv);
-	jsfunc_addr = *(void **)x;
+    // auto new_info = (CallbackInfoPublic&)(info);
+	// auto x = *(new_info._argv);
+	// jsfunc_addr = *(void **)x;
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // Extract the 64-bit integer argument
+    uint64_t raw = info[0].As<Napi::Number>().Int64Value();
+
+    // Convert to pointer
+    void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
 
 
     // void* handle = dlopen(NULL, RTLD_LAZY);
@@ -159,7 +169,7 @@ Napi::Value getcb(const Napi::CallbackInfo& info) {
 	// 	return env.Null();
     // }
 
-    std::cout << "JSFUNC address: " << jsfunc_addr << std::endl;
+    // std::cout << "JSFUNC address: " << jsfunc_addr << std::endl;
 
     // jsfunc_addr = *(void**)address;
     // bool sane = ((((uintptr_t)jsfunc_addr >> 47) + 1) & ~1ULL) == 0;
@@ -220,7 +230,7 @@ Napi::Value job_addr(const Napi::CallbackInfo& info) {
 }
 
 
-Napi::Value jid2(const Napi::CallbackInfo& info) {
+Napi::Value jid(const Napi::CallbackInfo& info) {
 	Napi::Env env = info.Env();
 	std::string ret;
     void *y;
@@ -302,7 +312,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   void* handle = dlopen(NULL, RTLD_LAZY);
   if (!print_fn)
       print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringPv");
-  exports.Set("id", Napi::Function::New(env, jid2));
+  exports.Set("jid", Napi::Function::New(env, jid));
   exports.Set("getcb", Napi::Function::New(env, getcb));
   exports.Set("get_objects", Napi::Function::New(env, get_objects));
   exports.Set("job_addr", Napi::Function::New(env, job_addr));

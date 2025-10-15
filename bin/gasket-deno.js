@@ -1,4 +1,4 @@
-#! /usr/bin/env -S deno --node-modules-dir=auto --allow-ffi --allow-run --allow-env --allow-read --allow-write
+#! /usr/bin/env -S deno --node-modules-dir=auto --allow-all
 
 import yargz from "npm:yargs@^18.0.0/yargs";
 import { hideBin  } from "npm:yargs@^18.0.0/helpers";
@@ -20,19 +20,20 @@ const addonPath = path.join(path.dirname(realSelf), "..", "src", "index.js");
 const transformPath = path.join(path.dirname(realSelf), "..", "src", "transformer.js");
 
 const { SimplePropertyRetriever } = await import(pathToFileURL(ffdirPath).href);
-const { jid } = await import(pathToFileURL(addonPath).href);
+const { addon } = await import(pathToFileURL(addonPath).href);
 const {default: transform} = await import(pathToFileURL(transformPath).href);
 
 const yargs = yargz(hideBin(process.argv))
 
 if (process.env.GASKET_ROOT) {
-  globalThis.RESOLVE_SCRIPT_PATH = path.join(process.env.GASKET_ROOT, 'resolve_syms.py')
+  globalThis.RESOLVE_SCRIPT_PATH = path.join(process.env.GASKET_ROOT, 'scripts/resolve_syms.py')
+  globalThis.GET_LOADED_LIBS_SCRIPT_PATH = path.join(process.env.GASKET_ROOT, 'scripts/get_loaded_libs.py')
 } else {
   globalThis.RESOLVE_SCRIPT_PATH = 'resolve-syms'
+  globalThis.GET_LOADED_LIBS_SCRIPT_PATH = 'get-loaded-libs'
 }
 
-self.mod = jid
-console.log(jid)
+self.mod = addon
 
 self.objects_examined = 0
 self.callable_objects = 0
@@ -53,13 +54,28 @@ self.fqn2cfunc = {}
 self.fqn2cfuncaddr = {}
 self.
 self.fqn2type = {}
-self.
 self.addr2sym = {}
-self.
 self.cbs_set = new Set()
 self.cbs = []
 
-self.current_parent = {}
+self.use_heap = false
+self.seen = new Set()
+
+self.heap_jsfuncs = []
+self.heap_jsfuncs_before = []
+self.heap_jsfuncs_before_addresses = []
+self.heap_jsfuncs_after = []
+self.heap_jsfuncs_after_addresses = []
+
+self.heap_accessorPair_addresses = []
+
+self.heap_ids_before = []
+self.heap_ids_after = []
+
+self.loaded_libs_before = []
+self.loaded_libs_after = []
+
+self.sym2lib = {}
 
 self.final_result = {
     'objects_examined': 0,
@@ -71,7 +87,6 @@ self.final_result = {
     'jump_libs': [],
     'bridges': [],
 }
-
 
 function parse_args() {
     return yargs
@@ -86,9 +101,43 @@ function parse_args() {
         type: 'string',
         description: 'output file',
       })
+      .option("profile-heap", {
+        alias: 'p',
+        type: "boolean",
+        describe: "Enable verbose mode",
+        default: false
+      })
       .help()
       .argv;
 }
+
+function get_library_symbols(path) {
+    const proc = new Deno.Command("nm", {
+      args: ["-D", "--defined-only", path],
+      stdout: "piped",
+      stderr: "piped",
+    }).outputSync();
+
+    if (proc.code !== 0) {
+      throw new Error(new TextDecoder().decode(proc.stderr));
+    }
+
+    const text = new TextDecoder().decode(proc.stdout);
+    return text
+      .split("\n")
+      .map(line => line.trim().split(/\s+/).pop())
+      .filter(sym => sym && !sym.startsWith("("));
+}
+
+function populate_sym2lib() {
+  for (const lib of self.loaded_libs_after) {
+    const syms = get_library_symbols(lib);
+    for (const sym of syms) {
+      sym2lib[sym] = lib;
+    }
+  }
+}
+
 
 /*
  * Deduplicate file paths by basename,
@@ -170,6 +219,29 @@ function gdb_resolve(addresses) {
 	console.log('GDB RESULT:')
 	console.log(result)
 
+	return result
+}
+
+function get_loaded_libs() {
+    const tmp_dir = os.tmpdir();
+    const res_file = path.join(tmp_dir, `res_${randomUUID()}.json`);
+
+    var pid = process.pid
+
+    var args = [GET_LOADED_LIBS_SCRIPT_PATH,
+            '-p', String(pid),
+            '-o', res_file]
+
+	var result = spawnSync('python3', args, { encoding: 'utf-8' });
+	const out = result.stdout
+	console.log('OUT:')
+	console.log(out)
+	const err = result.stderr
+	console.log('ERR:')
+	console.log(err)
+
+	const raw = fs.readFileSync(res_file, 'utf-8');
+	result = JSON.parse(raw);
 	return result
 }
 
@@ -335,25 +407,22 @@ function clear_dicts() {
 }
 
 
-
 function recursive_inspect(obj, jsname) {
     var pending = [[obj, jsname, {}]]
-    console.log(`len pending = ${pending.length}`)
-    var seen = new Set()
+    // console.log(`len pending = ${pending.length}`)
+    // var seen = new Set()
 	var desc_names
 	var desc
 	var descname
 	var getter
 	var setter
 	var v
-    var par = {}
 
     // XXX: BFS. Use queue: insert using .push(),
     //      get head using .shift
     while (pending.length > 0) {
-        [obj, jsname, par] = pending.shift()
-        console.log(`jsname = ${jsname}`)
-        // console.log(`dir(par) = ${dir(par)}`)
+        [obj, jsname] = pending.shift()
+        // console.log(`jsname = ${jsname}`)
 
         if (!(obj instanceof(Object)) && (typeof obj != "object")) {
             continue
@@ -374,16 +443,16 @@ function recursive_inspect(obj, jsname) {
         //   }
         // }
         if (typeof(obj) == 'function') {
-            check_bingo(obj, jsname, par)
+            check_bingo(mod.jid(obj), jsname)
         }
-        console.log(`dir(obj)`)
-        console.log(`${dir(obj)}`)
+        // console.log(`dir(obj)`)
+        // console.log(`${dir(obj)}`)
         for (const k of dir(obj)) {
-            console.log(`getattr(${jsname}, ${k})`)
+            // console.log(`getattr(${jsname}, ${k})`)
             try {
               v = obj[k]
             } catch(error) {
-              console.log(error)
+              // console.log(error)
               continue
             }
             objects_examined += 1
@@ -394,20 +463,101 @@ function recursive_inspect(obj, jsname) {
             if (typeof(obj) == 'function')
                 callable_objects += 1
 
-            var ident = mod.id(v)
+            var ident = mod.jid(v)
             if (seen.has(ident)) {
-                console.log('ALREADY SEEN')
+                // console.log('ALREADY SEEN')
                 continue
             } else {
                 seen.add(ident)
             }
 
-            pending.push([v, jsname + '.' + k, obj])
+            pending.push([v, jsname + '.' + k])
         }
-        seen.add(mod.id(obj))
+        seen.add(mod.jid(obj))
     }
 }
 
+function extractJSFunctions(input) {
+  const regexAddrFirst = /(0x[0-9a-fA-F]+)\s*<JSFunction\s+([^\s<(]+)/g;
+  const regexNameFirst = /([a-zA-Z0-9_]+):\s*(0x[0-9a-fA-F]+)\s*<JSFunction/g;
+
+  let match;
+
+  // Address-first pattern
+  while ((match = regexAddrFirst.exec(input)) !== null) {
+    callable_objects += 1;
+    objects_examined += 1;
+
+    const addr = parseInt(match[1]).toString();
+    const ob = { address: addr, name: match[2] };
+
+    if (!heap_jsfuncs_after_addresses.includes(addr)) {
+      if (!heap_jsfuncs_before_addresses.includes(addr)) {
+        heap_jsfuncs_after.push(ob);
+        heap_jsfuncs_after_addresses.push(addr);
+      }
+    }
+  }
+
+  // Name-first pattern
+  while ((match = regexNameFirst.exec(input)) !== null) {
+    callable_objects += 1;
+    objects_examined += 1;
+
+    const addr = parseInt(match[2]).toString();
+    const ob = { address: addr, name: match[1] };
+
+    if (!heap_jsfuncs_after_addresses.includes(addr)) {
+      if (!heap_jsfuncs_before_addresses.includes(addr)) {
+        heap_jsfuncs_after.push(ob);
+        heap_jsfuncs_after_addresses.push(addr);
+      }
+    }
+  }
+}
+
+function analyze_heap_before() {
+	var object_addresses = JSON.parse(mod.get_objects())
+    var addr
+    var raw
+	for (const addr of object_addresses) {
+        objects_examined += 1
+		if (!(heap_ids_before.includes(addr))) {
+			heap_ids_before.push(addr)
+		}
+	}
+}
+
+function analyze_heap() {
+	var object_addresses = JSON.parse(mod.get_objects())
+    var raw
+	for (const addr of object_addresses) {
+		if (!(heap_ids_before.includes(addr)) && !(heap_ids_after.includes(addr))) {
+			heap_ids_after.push(addr)
+		}
+	}
+	for (const addr of heap_ids_after) {
+		raw = mod.job_addr(parseInt(addr))
+                console.log(raw)
+		extractJSFunctions(raw)
+		// extractGetSetters(raw)
+	}
+    // console.log(`HEAP FUNCS BEFORE: ${heap_jsfuncs_before.length}`)
+    // console.log(JSON.stringify(heap_jsfuncs_before, null, 2))
+    console.log(`HEAP FUNCS AFTER: ${heap_jsfuncs_after.length}`)
+    console.log(JSON.stringify(heap_jsfuncs_after, null, 2))
+
+    heap_jsfuncs = heap_jsfuncs_after
+	for (const func of heap_jsfuncs) {
+		var addr = func.address
+		var name = func.name
+        console.log(`HEAP FUNC: ${addr} NAME=${name}`)
+        // check_bingo(addr, name)
+        if (!seen.has(addr)) {
+            check_bingo(parseInt(addr), name)
+        }
+	}
+}
 
 function locate_js_modules(packagePath) {
     const soFiles = [];
@@ -604,14 +754,15 @@ function get_mod_fqn(fullPath, packageRoot) {
     // const noExt = relativePath.replace(/\.node$/, ''); // remove .node
 }
 
-function check_bingo(obj, jsname, par) {
+function check_bingo(addr, jsname) {
     var jres
     var lib
     var cb
     var overloads
     var b
-    console.log(`dir(par) = ${dir(par)}`)
-    var res = mod.getcb(obj)
+    var cfunc
+    // console.log(`dir(par) = ${dir(par)}`)
+    var res = mod.getcb(parseInt(addr))
     if (res == 'NONE') {
         // fqn2failed[jsname] = 'FAILED_GETCB'
         return
@@ -621,20 +772,20 @@ function check_bingo(obj, jsname, par) {
         jres = JSON.parse(res)
         cb = jres['callback']
         overloads = jres['overloads']
-        if (overloads.length > 0 &&  "__GASKET_LIBRARY_PATH___" in par) {
-            console.log('IN HERE')
-            lib = par['__GASKET_LIBRARY_PATH___']
+        if (overloads.length > 0) {
+            // console.log('IN HERE')
+            cfunc = jsname.split(".").pop()
             b = {
                  'jsname': jsname,
-                 'cfunc': jsname.split(".").pop(),
-                 'library': lib,
+                 'cfunc': cfunc,
+                 'library': null,
                  'DENO_FFI': true
                  }
 
             console.log(b)
             final_result['bridges'].push(b)
-            if (!(final_result['jump_libs'].includes(lib)))
-                final_result['jump_libs'].push(lib)
+            // if (!(final_result['jump_libs'].includes(lib)))
+            //     final_result['jump_libs'].push(lib)
             return
         }
         console.log(`FQN = ${jsname}`)
@@ -646,17 +797,21 @@ function check_bingo(obj, jsname, par) {
         cbs_set.add(cb)
         // console.log('CBS = (next line)')
         // console.log(cbs_set)
-        fqn2cbaddr[jsname] = cb
+        // fqn2cbaddr[jsname] = cb
         // fqn2overloadsaddr[jsname] = overloads
-        fqn2obj[jsname] = obj
+        // fqn2obj[jsname] = addr
     }
 }
 
 async function foo() {
-    console.log('started!')
-    var start = Date.now()
-    const args = parse_args();
-    var output_file = args.output
+  self.loaded_libs_before = get_loaded_libs()
+  console.log('started!')
+  var start = Date.now()
+  const args = parse_args();
+  var output_file = args.output
+	if (args.profileHeap) {
+		analyze_heap_before()
+	}
 
     console.log(`Package root = ${args.root}`)
     console.log(`Output file = ${args.output}`)
@@ -674,6 +829,33 @@ async function foo() {
           self.final_result['modules'].push(so_file)
       } catch(error){
           console.log(`ERROR WHILE INSPECTING ${so_file}: ${error}`)
+      }
+    }
+
+    self.loaded_libs_after = get_loaded_libs();
+    const libs_diff = loaded_libs_after.filter(v => !self.loaded_libs_before.includes(v));
+    populate_sym2lib()
+    // console.log(JSON.stringify(self.sym2lib, null, 2))
+    // console.log(`libs_diff = ${libs_diff}`)
+
+	if (args.profileHeap) {
+		analyze_heap()
+	}
+    for (var b of self.final_result['bridges']) {
+      if (b['DENO_FFI'] === true) {
+        var cfunc = b['cfunc'];
+
+        if (cfunc in sym2lib) {
+          var lib = sym2lib[cfunc];
+          b['library'] = lib;
+        } else {
+          console.error("symbol not found:", cfunc);
+          lib = null;
+        }
+
+        if (!(final_result['jump_libs'].includes(lib))) {
+          final_result['jump_libs'].push(lib);
+        }
       }
     }
 
