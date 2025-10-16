@@ -256,6 +256,31 @@ Napi::Value get_objects(const Napi::CallbackInfo& info) {
     std::vector<Local<Object>> locals;
 
     int total = snap->GetNodesCount();
+
+    for (int i = 0; i < total; i++) {
+        const HeapGraphNode* node = snap->GetNode(i);
+        if (node->GetType() != HeapGraphNode::kObject) continue;
+    
+        SnapshotObjectId id = node->GetId();
+        Local<Value> val = hp->FindObjectById(id);
+        locals.push_back(val.As<Object>());
+    
+        // --- progress bar ---
+        int width = 50;  // bar width
+        float progress = (float)(i + 1) / total;
+        int pos = (int)(width * progress);
+    
+        printf("\r[");
+        for (int j = 0; j < width; j++) {
+            if (j < pos) printf("=");
+            else if (j == pos) printf(">");
+            else printf(" ");
+        }
+        printf("] %3d%% (%d/%d)", (int)(progress * 100), i + 1, total);
+        fflush(stdout);
+    }
+    printf("\n");
+/*
     for (int i = 0; i < total; i++) {
         const HeapGraphNode* node = snap->GetNode(i);
         if (node->GetType() != HeapGraphNode::kObject) continue;
@@ -266,6 +291,7 @@ Napi::Value get_objects(const Napi::CallbackInfo& info) {
 
         printf("Progress: %d / %d nodes processed\n", i, total);
     }
+*/
 
     // final message
     printf("Done: processed %d nodes\n", total);
@@ -312,6 +338,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   void* handle = dlopen(NULL, RTLD_LAZY);
   if (!print_fn)
       print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringPv");
+  // Fallback, cxx11 ABI
   if (!print_fn)
       print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringB5cxx11Pv");
   exports.Set("jid", Napi::Function::New(env, jid));
