@@ -299,7 +299,7 @@ out:
     return Napi::String::New(env, msg);
 }
 
-void extract_napi(const FunctionCallbackInfo<Value>& args) {
+Napi::Value extract_napi(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
     if (info.Length() < 1 || !info[0].IsNumber()) {
