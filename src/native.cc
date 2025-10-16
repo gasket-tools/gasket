@@ -104,7 +104,6 @@ std::string extract_callback_and_overloads_json(const std::string& input) {
 
     // Match callback
 	std::regex callback_regex(R"(-\s*callback:\s*(0x[0-9a-fA-F]+))");
-    // std::regex callback_regex(R"(___CALLBACK___(.*?)___CALLBACK___)");
     std::smatch callback_match;
     if (std::regex_search(input, callback_match, callback_regex)) {
         callback = callback_match[1].str();
@@ -275,7 +274,7 @@ Napi::Value extract_fcb_invoke(const Napi::CallbackInfo& info) {
 	// job SFI
     msg = print_fn(sfi_addr);
 
-	// Get callback data from job SFI. ___CALLBACK_DATA___
+	// Get callback data from job SFI
     callback_data_addr = extract_callback_data_from_sfi(msg);
 
     if (!callback_data_addr)
@@ -335,7 +334,7 @@ Napi::Value extract_napi(const Napi::CallbackInfo& info) {
 	// job SFI
     msg = print_fn(sfi_addr);
 
-	// Get callback data from job SFI. ___CALLBACK_DATA___
+	// Get callback data from job SFI.
     callback_data_addr = extract_callback_data_from_sfi(msg);
 
     if (!callback_data_addr)
@@ -407,7 +406,7 @@ Napi::Value extract_nan(const Napi::CallbackInfo& info) {
 	// job SFI
     msg = print_fn(sfi_addr);
 
-	// Get callback data from job SFI. ___CALLBACK_DATA___
+	// Get callback data from job SFI.
     callback_data_addr = extract_callback_data_from_sfi(msg);
 
     if (!callback_data_addr)
