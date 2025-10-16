@@ -299,6 +299,67 @@ out:
     return Napi::String::New(env, msg);
 }
 
+void extract_napi(const FunctionCallbackInfo<Value>& args) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // Extract the 64-bit integer argument
+    uint64_t raw = info[0].As<Napi::Number>().Int64Value();
+    // Convert to pointer
+    void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
+    void *sfi_addr;
+	void *callback_data_addr;
+	void *external_value_addr;
+	void *cfunc_addr;
+	CallbackBundle bundle;
+	// Napi_CallbackData napi_cb_data;
+	void **napi_cb_data;
+    std::string msg;
+
+    if (!jsfunc_addr)
+        goto out_with_null;
+
+	// job JSFunction
+    msg = print_fn(jsfunc_addr);
+
+    sfi_addr = extract_sfi_pointer(msg);
+
+    if (!sfi_addr)
+        goto out_with_null;
+
+	// job SFI
+    msg = print_fn(sfi_addr);
+
+	// Get callback data from job SFI. ___CALLBACK_DATA___
+    callback_data_addr = extract_callback_data_from_sfi(msg);
+
+    if (!callback_data_addr)
+        goto out_with_null;
+
+	// job callback_data
+    msg = print_fn(callback_data_addr);
+
+    external_value_addr = extract_external_value_from_js_external_object(msg);
+
+	if (!external_value_addr)
+		goto out_with_null;
+
+	bundle = *(CallbackBundle *)external_value_addr;
+	napi_cb_data = (void **)bundle.cb_data;
+	cfunc_addr = *napi_cb_data;
+    msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
+    goto out;
+
+out_with_null:
+    msg = "NONE";
+out:
+    return Napi::String::New(env, msg);
+}
+
 
 Napi::Value jid(const Napi::CallbackInfo& info) {
 	Napi::Env env = info.Env();
@@ -416,6 +477,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("get_objects", Napi::Function::New(env, get_objects));
   exports.Set("job_addr", Napi::Function::New(env, job_addr));
   exports.Set("extract_fcb_invoke", Napi::Function::New(env, extract_fcb_invoke));
+  exports.Set("extract_napi", Napi::Function::New(env, extract_napi));
   return exports;
 }
 
