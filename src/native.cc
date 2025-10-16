@@ -103,7 +103,8 @@ std::string extract_callback_and_overloads_json(const std::string& input) {
 	// std::cout << "FTI string: " << input << std::endl;
 
     // Match callback
-    std::regex callback_regex(R"(___CALLBACK___(.*?)___CALLBACK___)");
+	std::regex callback_regex(R"(-\s*callback:\s*(0x[0-9a-fA-F]+))");
+    // std::regex callback_regex(R"(___CALLBACK___(.*?)___CALLBACK___)");
     std::smatch callback_match;
     if (std::regex_search(input, callback_match, callback_regex)) {
         callback = callback_match[1].str();
@@ -446,18 +447,6 @@ std::string extract_name_from_jsfunction(const std::string& input) {
 
     return "NONE";
 }
-
-// std::string extract_name_from_jsfunction(const std::string& input) {
-//     // XXX: external value
-//     std::regex callback_regex(R"(___NAME___(.*?)___NAME___)");
-//     std::smatch callback_match;
-//     if (std::regex_search(input, callback_match, callback_regex)) {
-//         std::string name = callback_match[1].str();
-//         return name;
-//     }
-// 
-//     return "NONE";
-// }
 
 Napi::Value extract_neon(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
