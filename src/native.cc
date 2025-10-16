@@ -415,6 +415,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("getcb", Napi::Function::New(env, getcb));
   exports.Set("get_objects", Napi::Function::New(env, get_objects));
   exports.Set("job_addr", Napi::Function::New(env, job_addr));
+  exports.Set("extract_fcb_invoke", Napi::Function::New(env, extract_fcb_invoke));
   return exports;
 }
 
