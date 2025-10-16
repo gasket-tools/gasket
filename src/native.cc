@@ -226,9 +226,23 @@ void* extract_callback_data_from_sfi(const std::string& input) {
 
     return nullptr;
 }
-// void* extract_callback_data_from_sfi(const std::string& input) {
-//     // Match callback_data
-//     std::regex callback_regex(R"(___CALLBACK_DATA___(.*?)___CALLBACK_DATA___)");
+
+void* extract_external_value_from_js_external_object(const std::string& input) {
+    std::regex value_regex(R"(external value:\s*0x([0-9a-fA-F]+))");
+    std::smatch match;
+
+    if (std::regex_search(input, match, value_regex)) {
+        std::string hex_str = match[1].str();
+        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
+        return reinterpret_cast<void*>(address);
+    }
+
+    return nullptr;
+}
+
+// void* extract_external_value_from_js_external_object(const std::string& input) {
+//     // XXX: external value
+//     std::regex callback_regex(R"(___EXTERNAL_VALUE___(.*?)___EXTERNAL_VALUE___)");
 //     std::smatch callback_match;
 //     if (std::regex_search(input, callback_match, callback_regex)) {
 //         std::string hex_str = callback_match[1].str();
@@ -238,19 +252,6 @@ void* extract_callback_data_from_sfi(const std::string& input) {
 // 
 //     return nullptr;
 // }
-
-void* extract_external_value_from_js_external_object(const std::string& input) {
-    // XXX: external value
-    std::regex callback_regex(R"(___EXTERNAL_VALUE___(.*?)___EXTERNAL_VALUE___)");
-    std::smatch callback_match;
-    if (std::regex_search(input, callback_match, callback_regex)) {
-        std::string hex_str = callback_match[1].str();
-        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
-        return reinterpret_cast<void*>(address);
-    }
-
-    return nullptr;
-}
 
 Napi::Value extract_fcb_invoke(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
