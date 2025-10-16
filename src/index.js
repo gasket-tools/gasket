@@ -11,4 +11,4 @@ const native = nodeGypBuild(resolve(dirname(fileURLToPath(import.meta.url)), "..
 
 export const addon = native;
 
-export * from './ffdir.js';
+// export * from './ffdir.js';
