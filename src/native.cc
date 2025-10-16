@@ -484,7 +484,7 @@ Napi::Value extract_neon(const Napi::CallbackInfo& info) {
     std::string msg;
 
 
-    msg = _v8_internal_Print_Object_To_String(callback_data_addr);
+    msg = print_fn(callback_data_addr);
 
     external_value_addr = extract_external_value_from_js_external_object(msg);
 
