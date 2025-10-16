@@ -312,6 +312,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   void* handle = dlopen(NULL, RTLD_LAZY);
   if (!print_fn)
       print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringPv");
+  if (!print_fn)
+      print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringB5cxx11Pv");
   exports.Set("jid", Napi::Function::New(env, jid));
   exports.Set("getcb", Napi::Function::New(env, getcb));
   exports.Set("get_objects", Napi::Function::New(env, get_objects));

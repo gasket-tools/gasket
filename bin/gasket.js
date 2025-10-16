@@ -12,7 +12,8 @@ import v8 from "v8"
 import * as utils from 'gasket-tools/utils';
 import parseArgs from 'gasket-tools/args';
 import dir from 'gasket-tools/ffdir';
-import * as mod from 'gasket-tools';
+import * as rawmod from 'gasket-tools';
+globalThis.mod = rawmod.addon
 
 import transform, {revertChanges} from 'gasket-tools/transformer';
 
@@ -167,15 +168,15 @@ class OLAAnalysis {
     const wasm_instance_address = parseInt(extract_wasm_instance_address(
         jobRes));
     this.wasm_state.fqn2wasminstance[jsname] = wasm_instance_address;
-    let raw = v8.job_addr(wasm_instance_address);
+    let raw = mod.job_addr(wasm_instance_address);
     const exports_addr = parseInt(extract_exports_addr(raw))
-    raw = v8.job_addr(exports_addr)
+    raw = mod.job_addr(exports_addr)
     const jsnames = extract_jsnames_from_export(raw)
     this.wasm_state.wasminstance2jsnames[wasm_instance_address] = jsnames
   }
 
   visitObject(addr, jsname) {
-    let raw = v8.job_addr(addr)
+    let raw = mod.job_addr(parseInt(addr))
     // First check if the object contains an index to a Wasm function.
     const idxstr = extract_wasm_idx(raw)
     if (idxstr === null) {
@@ -720,7 +721,7 @@ class OLAAnalysis {
     console.log('after heap snapshot, object addresses = ')
     console.log(object_addresses)
     for (const addr of this.heap_ids_after) {
-      const raw = v8.job_addr(addr);
+      const raw = mod.job_addr(addr);
 	  if (!this.args.nativeOnly) {
 		this.extractWasmFunctions(raw);
 	  }
@@ -830,7 +831,7 @@ function extract_exports_addr(text) {
 
 function extract_ap(addr) {
   let text;
-  text = v8.job_addr(addr)
+  text = mod.job_addr(addr)
   // console.log(text)
   const getterMatch =
     text.match(/getter:[\s\S]*?(?:___CALLBACK_DATA___(0x[0-9a-f]+)|\s*(0x[0-9a-f]+)\s*<JSFunction)/i);
@@ -866,6 +867,7 @@ function extract_ap(addr) {
 
 
 function main() {
+  console.log(dir(mod))
   const args = parseArgs();
   const analysis = new OLAAnalysis(args);
   analysis.analyze();
