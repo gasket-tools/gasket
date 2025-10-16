@@ -1,7 +1,8 @@
-if (typeof Deno !== "undefined") {
-	import nodeGypBuild from 'npm:node-gyp-build';
+let nodeGypBuild;
+if (typeof Deno !== "undefined" && Deno.version?.deno) {
+  nodeGypBuild = (await import("npm:node-gyp-build")).default;
 } else {
-  import nodeGypBuild from 'node-gyp-build';
+  nodeGypBuild = (await import("node-gyp-build")).default;
 }
 import { fileURLToPath  } from "node:url";
 import { dirname, resolve } from "node:path";
