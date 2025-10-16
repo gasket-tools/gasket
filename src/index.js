@@ -3,7 +3,6 @@ if (typeof Deno !== "undefined") {
 } else {
   import nodeGypBuild from 'node-gyp-build';
 }
-import nodeGypBuild from 'npm:node-gyp-build';
 import { fileURLToPath  } from "node:url";
 import { dirname, resolve } from "node:path";
 
