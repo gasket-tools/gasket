@@ -141,7 +141,7 @@ class OLAAnalysis {
   visitObjectNative(addr, jsname) {
     // This function checks if the given object contains a bridge to a native
     // function.
-    const res = v8.getcb(addr)
+    const res = mod.getcb(addr)
     if (res == 'NONE') {
       return;
     } else {
