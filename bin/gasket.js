@@ -189,7 +189,7 @@ class OLAAnalysis {
 
   extract_fcb_invoke(fqn) {
     const addr = this.state.fqn2addr[fqn];
-    const res = mod.extract_fcb_invoke(addr)
+    const res = mod.extract_fcb_invoke(parseInt(addr))
     if (res == 'NONE') {
       this.state.fqn2failed[fqn] = 'EXTRACT_FCB_INOKE'
     } else { /* res = address of cb2 */
