@@ -327,7 +327,7 @@ class OLAAnalysis {
           this.stats.callable_objects += 1;
         }
         const ident = mod.jid(v)
-        const jobstr = mod.job_addr(ident)
+        const jobstr = mod.job_addr(parseInt(ident))
 		    if (this.seenObjects.has(ident) && !((jobstr ?? '').includes('wasm'))) {
           // skip object; already seen.
           continue;
