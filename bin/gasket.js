@@ -212,7 +212,7 @@ class OLAAnalysis {
 
   extract_nan(fqn) {
     const addr = this.state.fqn2addr[fqn];
-    const res = mod.extract_nan(addr);
+    const res = mod.extract_nan(parseInt(addr));
     if (res == 'NONE') {
       this.state.fqn2failed[fqn] = 'EXTRACT_NAN';
     } else {
@@ -254,7 +254,7 @@ class OLAAnalysis {
       this.extract_napi(fqn);
     } else if (cb.includes('neon') && cb.includes('sys')) {
       const addr = this.state.fqn2addr[fqn]
-      const name = mod.extract_neon(addr)
+      const name = mod.extract_neon(parseInt(addr))
       let fn;
       if (name !== 'NONE') {
         const match = name.match(/#([^>]+)>/);
@@ -680,7 +680,7 @@ class OLAAnalysis {
       if (m.type == 'CallbackData') {
         getter_cbdata = m['getter'].address;
         if (getter_cbdata != null) {
-              cfunc_addr = mod.extract_cfunc_getset(getter_cbdata);
+              cfunc_addr = mod.extract_cfunc_getset(parseInt(getter_cbdata));
               fqn = name + '.' + 'GET';
               if (cfunc_addr != 'NONE') {
                   this.stats.foreign_callable_objects += 1;
@@ -689,7 +689,7 @@ class OLAAnalysis {
           }
           setter_cbdata = m['setter'].address
           if (setter_cbdata != null) {
-              cfunc_addr = mod.extract_cfunc_getset(setter_cbdata);
+              cfunc_addr = mod.extract_cfunc_getset(parseInt(setter_cbdata));
               fqn = name + '.' + 'SET';
               if (cfunc_addr != 'NONE') {
                   this.stats.foreign_callable_objects += 1;
