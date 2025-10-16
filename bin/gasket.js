@@ -701,7 +701,7 @@ class OLAAnalysis {
   }
 
   analyzeHeapBefore() {
-    const object_addresses = JSON.parse(v8.get_objects())
+    const object_addresses = JSON.parse(mod.get_objects())
     for (const addr of object_addresses) {
 	  this.stats.objects_examined += 1
       if (!(this.heap_ids_before.includes(addr))) {
@@ -711,7 +711,7 @@ class OLAAnalysis {
   }
 
   analyzeHeapAfter() {
-    const object_addresses = JSON.parse(v8.get_objects())
+    const object_addresses = JSON.parse(mod.get_objects())
     for (const addr of object_addresses) {
       if (!(this.heap_ids_before.includes(addr))
           && !(this.heap_ids_after.includes(addr))) {
