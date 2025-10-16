@@ -464,7 +464,7 @@ out:
     return Napi::String::New(env, msg);
 }
 
-Napi::Value extract_neon(const Napi::CallbackInfo& info) {
+Napi::Value extract_cfunc_getset(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
     if (info.Length() < 1 || !info[0].IsNumber()) {
