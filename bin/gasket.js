@@ -12,7 +12,7 @@ import v8 from "v8"
 import * as utils from 'gasket-tools/utils';
 import parseArgs from 'gasket-tools/args';
 import dir from 'gasket-tools/ffdir';
-import addon from 'gasket-tools/index';
+import addon from 'gasket-tools';
 self.mod = addon;
 import transform, {revertChanges} from 'gasket-tools/transformer';
 
