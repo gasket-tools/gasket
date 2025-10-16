@@ -304,14 +304,14 @@ class OLAAnalysis {
         const getter = desc['get'];
         const setter = desc['set'];
         if (typeof(getter) == 'function') {
-          this.visitObject(v8.jid(getter), descname + '.' + 'GET');
+          this.visitObject(mod.jid(getter), descname + '.' + 'GET');
         }
         if (typeof(setter) == 'function') {
-          this.visitObject(v8.jid(setter), descname + '.' + 'SET');
+          this.visitObject(mod.jid(setter), descname + '.' + 'SET');
         }
       }
       if (typeof(obj) == 'function') {
-        this.visitObject(v8.jid(obj), jsname);
+        this.visitObject(mod.jid(obj), jsname);
       }
 
       for (const k of dir(obj)) {
@@ -326,8 +326,8 @@ class OLAAnalysis {
         if (typeof(obj) == 'function') {
           this.stats.callable_objects += 1;
         }
-        const ident = v8.jid(v)
-        const jobstr = v8.job(v)
+        const ident = mod.jid(v)
+        const jobstr = mod.job_addr(ident)
 		    if (this.seenObjects.has(ident) && !((jobstr ?? '').includes('wasm'))) {
           // skip object; already seen.
           continue;
@@ -336,7 +336,7 @@ class OLAAnalysis {
         }
         pending.push([v, jsname + '.' + k]);
       }
-      this.seenObjects.add(v8.jid(obj));
+      this.seenObjects.add(mod.jid(obj));
     }
   }
 
