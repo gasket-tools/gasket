@@ -25,6 +25,19 @@ typedef std::string (*PrintObjectFn)(void*);
 
 PrintObjectFn print_fn;
 
+class CallbackBundle {
+ public:
+  static v8::Local<v8::Value> New(napi_env env, napi_callback cb, void* data);
+  static CallbackBundle* FromCallbackData(v8::Local<v8::Value> data);
+
+  napi_env env;
+  void* cb_data;
+  napi_callback cb;
+
+ private:
+  static void Delete(napi_env env, void* data, void* hint);
+};
+
 typedef struct {
       const size_t _staticArgCount = 6;
       napi_env _env;
@@ -259,7 +272,7 @@ Napi::Value extract_fcb_invoke(const Napi::CallbackInfo& info) {
         goto out_with_null;
 
 	// job SFI
-    msg = _v8_internal_Print_Object_To_String(sfi_addr);
+    msg = print_fn(sfi_addr);
 
 	// Get callback data from job SFI. ___CALLBACK_DATA___
     callback_data_addr = extract_callback_data_from_sfi(msg);
@@ -268,7 +281,7 @@ Napi::Value extract_fcb_invoke(const Napi::CallbackInfo& info) {
         goto out_with_null;
 
 	// job callback_data
-    msg = _v8_internal_Print_Object_To_String(callback_data_addr);
+    msg = print_fn(callback_data_addr);
 
     external_value_addr = extract_external_value_from_js_external_object(msg);
 
