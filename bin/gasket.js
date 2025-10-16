@@ -201,7 +201,7 @@ class OLAAnalysis {
   extract_napi(fqn) {
     console.log(`Extract napi called: ${fqn}`)
     const addr = this.state.fqn2addr[fqn];
-    const res = mod.extract_napi(addr);
+    const res = mod.extract_napi(parseInt(addr));
     if (res == 'NONE') {
       this.state.fqn2failed[fqn] = 'EXTRACT_NAPI';
     } else {
