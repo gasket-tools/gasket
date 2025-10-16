@@ -360,6 +360,19 @@ out:
     return Napi::String::New(env, msg);
 }
 
+void* extract_js_external_object_from_api_object(const std::string& input) {
+    // XXX: external value
+	std::regex callback_regex(R"(0x[0-9a-fA-F]+(?=\s+<JSExternalObject>))");
+    std::smatch callback_match;
+    if (std::regex_search(input, callback_match, callback_regex)) {
+        std::string hex_str = callback_match[0].str();
+        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
+        return reinterpret_cast<void*>(address);
+    }
+
+    return nullptr;
+}
+
 Napi::Value extract_nan(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
@@ -462,19 +475,6 @@ out_with_null:
     msg = "NONE";
 out:
     return Napi::String::New(env, msg);
-}
-
-void* extract_js_external_object_from_api_object(const std::string& input) {
-    // XXX: external value
-	std::regex callback_regex(R"(0x[0-9a-fA-F]+(?=\s+<JSExternalObject>))");
-    std::smatch callback_match;
-    if (std::regex_search(input, callback_match, callback_regex)) {
-        std::string hex_str = callback_match[0].str();
-        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
-        return reinterpret_cast<void*>(address);
-    }
-
-    return nullptr;
 }
 
 Napi::Value extract_cfunc_getset(const Napi::CallbackInfo& info) {
