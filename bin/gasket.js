@@ -106,7 +106,7 @@ class OLAAnalysis {
       this.analyzeHeapBefore();
     }
 
-    if (!this.args.nativeOnly) {
+    if (!this.args.nativeOnly && !this.args.internal) {
       const wasmModules = utils.locateWasmModules(this.args.root);
       for (const mod of wasmModules) {
         this.analyze_wasm(mod);
