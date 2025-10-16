@@ -12,6 +12,9 @@ import v8 from "v8"
 import * as utils from 'gasket-tools/utils';
 import parseArgs from 'gasket-tools/args';
 import dir from 'gasket-tools/ffdir';
+import * as rawmod from 'gasket-tools';
+globalThis.mod = rawmod.addon
+
 import transform, {revertChanges} from 'gasket-tools/transformer';
 
 
@@ -103,7 +106,7 @@ class OLAAnalysis {
       this.analyzeHeapBefore();
     }
 
-    if (!this.args.nativeOnly) {
+    if (!this.args.nativeOnly && !this.args.internal) {
       const wasmModules = utils.locateWasmModules(this.args.root);
       for (const mod of wasmModules) {
         this.analyze_wasm(mod);
@@ -138,7 +141,7 @@ class OLAAnalysis {
   visitObjectNative(addr, jsname) {
     // This function checks if the given object contains a bridge to a native
     // function.
-    const res = v8.getcb(addr)
+    const res = mod.getcb(parseInt(addr))
     if (res == 'NONE') {
       return;
     } else {
@@ -165,15 +168,15 @@ class OLAAnalysis {
     const wasm_instance_address = parseInt(extract_wasm_instance_address(
         jobRes));
     this.wasm_state.fqn2wasminstance[jsname] = wasm_instance_address;
-    let raw = v8.job_addr(wasm_instance_address);
+    let raw = mod.job_addr(wasm_instance_address);
     const exports_addr = parseInt(extract_exports_addr(raw))
-    raw = v8.job_addr(exports_addr)
+    raw = mod.job_addr(exports_addr)
     const jsnames = extract_jsnames_from_export(raw)
     this.wasm_state.wasminstance2jsnames[wasm_instance_address] = jsnames
   }
 
   visitObject(addr, jsname) {
-    let raw = v8.job_addr(addr)
+    let raw = mod.job_addr(parseInt(addr))
     // First check if the object contains an index to a Wasm function.
     const idxstr = extract_wasm_idx(raw)
     if (idxstr === null) {
@@ -186,7 +189,7 @@ class OLAAnalysis {
 
   extract_fcb_invoke(fqn) {
     const addr = this.state.fqn2addr[fqn];
-    const res = v8.extract_fcb_invoke(addr)
+    const res = mod.extract_fcb_invoke(parseInt(addr))
     if (res == 'NONE') {
       this.state.fqn2failed[fqn] = 'EXTRACT_FCB_INOKE'
     } else { /* res = address of cb2 */
@@ -198,7 +201,7 @@ class OLAAnalysis {
   extract_napi(fqn) {
     console.log(`Extract napi called: ${fqn}`)
     const addr = this.state.fqn2addr[fqn];
-    const res = v8.extract_napi(addr);
+    const res = mod.extract_napi(parseInt(addr));
     if (res == 'NONE') {
       this.state.fqn2failed[fqn] = 'EXTRACT_NAPI';
     } else {
@@ -209,7 +212,7 @@ class OLAAnalysis {
 
   extract_nan(fqn) {
     const addr = this.state.fqn2addr[fqn];
-    const res = v8.extract_nan(addr);
+    const res = mod.extract_nan(parseInt(addr));
     if (res == 'NONE') {
       this.state.fqn2failed[fqn] = 'EXTRACT_NAN';
     } else {
@@ -251,7 +254,7 @@ class OLAAnalysis {
       this.extract_napi(fqn);
     } else if (cb.includes('neon') && cb.includes('sys')) {
       const addr = this.state.fqn2addr[fqn]
-      const name = v8.extract_neon(addr)
+      const name = mod.extract_neon(parseInt(addr))
       let fn;
       if (name !== 'NONE') {
         const match = name.match(/#([^>]+)>/);
@@ -301,14 +304,14 @@ class OLAAnalysis {
         const getter = desc['get'];
         const setter = desc['set'];
         if (typeof(getter) == 'function') {
-          this.visitObject(v8.jid(getter), descname + '.' + 'GET');
+          this.visitObject(mod.jid(getter), descname + '.' + 'GET');
         }
         if (typeof(setter) == 'function') {
-          this.visitObject(v8.jid(setter), descname + '.' + 'SET');
+          this.visitObject(mod.jid(setter), descname + '.' + 'SET');
         }
       }
       if (typeof(obj) == 'function') {
-        this.visitObject(v8.jid(obj), jsname);
+        this.visitObject(mod.jid(obj), jsname);
       }
 
       for (const k of dir(obj)) {
@@ -323,8 +326,8 @@ class OLAAnalysis {
         if (typeof(obj) == 'function') {
           this.stats.callable_objects += 1;
         }
-        const ident = v8.jid(v)
-        const jobstr = v8.job(v)
+        const ident = mod.jid(v)
+        const jobstr = mod.job_addr(parseInt(ident))
 		    if (this.seenObjects.has(ident) && !((jobstr ?? '').includes('wasm'))) {
           // skip object; already seen.
           continue;
@@ -333,7 +336,7 @@ class OLAAnalysis {
         }
         pending.push([v, jsname + '.' + k]);
       }
-      this.seenObjects.add(v8.jid(obj));
+      this.seenObjects.add(mod.jid(obj));
     }
   }
 
@@ -677,7 +680,7 @@ class OLAAnalysis {
       if (m.type == 'CallbackData') {
         getter_cbdata = m['getter'].address;
         if (getter_cbdata != null) {
-              cfunc_addr = v8.extract_cfunc_getset(getter_cbdata);
+              cfunc_addr = mod.extract_cfunc_getset(parseInt(getter_cbdata));
               fqn = name + '.' + 'GET';
               if (cfunc_addr != 'NONE') {
                   this.stats.foreign_callable_objects += 1;
@@ -686,7 +689,7 @@ class OLAAnalysis {
           }
           setter_cbdata = m['setter'].address
           if (setter_cbdata != null) {
-              cfunc_addr = v8.extract_cfunc_getset(setter_cbdata);
+              cfunc_addr = mod.extract_cfunc_getset(parseInt(setter_cbdata));
               fqn = name + '.' + 'SET';
               if (cfunc_addr != 'NONE') {
                   this.stats.foreign_callable_objects += 1;
@@ -698,7 +701,7 @@ class OLAAnalysis {
   }
 
   analyzeHeapBefore() {
-    const object_addresses = JSON.parse(v8.get_objects())
+    const object_addresses = JSON.parse(mod.get_objects())
     for (const addr of object_addresses) {
 	  this.stats.objects_examined += 1
       if (!(this.heap_ids_before.includes(addr))) {
@@ -708,7 +711,7 @@ class OLAAnalysis {
   }
 
   analyzeHeapAfter() {
-    const object_addresses = JSON.parse(v8.get_objects())
+    const object_addresses = JSON.parse(mod.get_objects())
     for (const addr of object_addresses) {
       if (!(this.heap_ids_before.includes(addr))
           && !(this.heap_ids_after.includes(addr))) {
@@ -718,7 +721,7 @@ class OLAAnalysis {
     console.log('after heap snapshot, object addresses = ')
     console.log(object_addresses)
     for (const addr of this.heap_ids_after) {
-      const raw = v8.job_addr(addr);
+      const raw = mod.job_addr(addr);
 	  if (!this.args.nativeOnly) {
 		this.extractWasmFunctions(raw);
 	  }
@@ -828,7 +831,7 @@ function extract_exports_addr(text) {
 
 function extract_ap(addr) {
   let text;
-  text = v8.job_addr(addr)
+  text = mod.job_addr(addr)
   // console.log(text)
   const getterMatch =
     text.match(/getter:[\s\S]*?(?:___CALLBACK_DATA___(0x[0-9a-f]+)|\s*(0x[0-9a-f]+)\s*<JSFunction)/i);
@@ -864,6 +867,7 @@ function extract_ap(addr) {
 
 
 function main() {
+  console.log(dir(mod))
   const args = parseArgs();
   const analysis = new OLAAnalysis(args);
   analysis.analyze();

@@ -25,6 +25,19 @@ typedef std::string (*PrintObjectFn)(void*);
 
 PrintObjectFn print_fn;
 
+class CallbackBundle {
+ public:
+  static v8::Local<v8::Value> New(napi_env env, napi_callback cb, void* data);
+  static CallbackBundle* FromCallbackData(v8::Local<v8::Value> data);
+
+  napi_env env;
+  void* cb_data;
+  napi_callback cb;
+
+ private:
+  static void Delete(napi_env env, void* data, void* hint);
+};
+
 typedef struct {
       const size_t _staticArgCount = 6;
       napi_env _env;
@@ -90,7 +103,7 @@ std::string extract_callback_and_overloads_json(const std::string& input) {
 	// std::cout << "FTI string: " << input << std::endl;
 
     // Match callback
-    std::regex callback_regex(R"(___CALLBACK___(.*?)___CALLBACK___)");
+	std::regex callback_regex(R"(-\s*callback:\s*(0x[0-9a-fA-F]+))");
     std::smatch callback_match;
     if (std::regex_search(input, callback_match, callback_regex)) {
         callback = callback_match[1].str();
@@ -153,34 +166,6 @@ Napi::Value getcb(const Napi::CallbackInfo& info) {
     // Convert to pointer
     void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
 
-
-    // void* handle = dlopen(NULL, RTLD_LAZY);
-
-    // if (!print_fn)
-	// 	print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringPv");
-
-    // if (info.Length() < 1) {
-	// 	Napi::TypeError::New(env, "Expected 1 argument").ThrowAsJavaScriptException();
-	// 	return env.Null();
-	// }
-
-    // if (!info[0]->IsObject()) {
-	// 	Napi::TypeError::New(env, "Not an object").ThrowAsJavaScriptException();
-	// 	return env.Null();
-    // }
-
-    // std::cout << "JSFUNC address: " << jsfunc_addr << std::endl;
-
-    // jsfunc_addr = *(void**)address;
-    // bool sane = ((((uintptr_t)jsfunc_addr >> 47) + 1) & ~1ULL) == 0;
-    // // bool sane = (((jsfunc_addr >> 47) + 1) & ~1ULL) == 0;
-    // if (!sane)
-    //     std::cout << "JSFUNC ADDRESS INSANE" << jsfunc_addr << std::endl;
-
-
-    // if (!jsfunc_addr || !sane)
-    //     goto out_with_null;
-
     msg = print_fn(jsfunc_addr);
 
     sfi_addr = extract_sfi_pointer(msg);
@@ -229,6 +214,307 @@ Napi::Value job_addr(const Napi::CallbackInfo& info) {
     return Napi::String::New(env, msg);
 }
 
+void* extract_callback_data_from_sfi(const std::string& input) {
+    std::regex data_regex(R"(data=\s*0x([0-9a-fA-F]+))");
+    std::smatch match;
+
+    if (std::regex_search(input, match, data_regex)) {
+        std::string hex_str = match[1].str();
+        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
+        return reinterpret_cast<void*>(address);
+    }
+
+    return nullptr;
+}
+
+void* extract_external_value_from_js_external_object(const std::string& input) {
+    std::regex value_regex(R"(external value:\s*0x([0-9a-fA-F]+))");
+    std::smatch match;
+
+    if (std::regex_search(input, match, value_regex)) {
+        std::string hex_str = match[1].str();
+        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
+        return reinterpret_cast<void*>(address);
+    }
+
+    return nullptr;
+}
+
+Napi::Value extract_fcb_invoke(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // Extract the 64-bit integer argument
+    uint64_t raw = info[0].As<Napi::Number>().Int64Value();
+    // Convert to pointer
+    void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
+
+    void *sfi_addr;
+	void *callback_data_addr;
+	void *external_value_addr;
+	void *cfunc_addr;
+	CallbackBundle bundle;
+    std::string msg;
+
+    if (!jsfunc_addr)
+        goto out_with_null;
+
+	// job JSFunction
+    msg = print_fn(jsfunc_addr);
+
+    sfi_addr = extract_sfi_pointer(msg);
+
+    if (!sfi_addr)
+        goto out_with_null;
+
+	// job SFI
+    msg = print_fn(sfi_addr);
+
+	// Get callback data from job SFI
+    callback_data_addr = extract_callback_data_from_sfi(msg);
+
+    if (!callback_data_addr)
+        goto out_with_null;
+
+	// job callback_data
+    msg = print_fn(callback_data_addr);
+
+    external_value_addr = extract_external_value_from_js_external_object(msg);
+
+	if (!external_value_addr)
+		goto out_with_null;
+
+	bundle = *(CallbackBundle *)external_value_addr;
+	cfunc_addr = (void *)bundle.cb;
+	msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
+    goto out;
+
+out_with_null:
+    msg = "NONE";
+out:
+    return Napi::String::New(env, msg);
+}
+
+Napi::Value extract_napi(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // Extract the 64-bit integer argument
+    uint64_t raw = info[0].As<Napi::Number>().Int64Value();
+    // Convert to pointer
+    void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
+    void *sfi_addr;
+	void *callback_data_addr;
+	void *external_value_addr;
+	void *cfunc_addr;
+	CallbackBundle bundle;
+	// Napi_CallbackData napi_cb_data;
+	void **napi_cb_data;
+    std::string msg;
+
+    if (!jsfunc_addr)
+        goto out_with_null;
+
+	// job JSFunction
+    msg = print_fn(jsfunc_addr);
+
+    sfi_addr = extract_sfi_pointer(msg);
+
+    if (!sfi_addr)
+        goto out_with_null;
+
+	// job SFI
+    msg = print_fn(sfi_addr);
+
+	// Get callback data from job SFI.
+    callback_data_addr = extract_callback_data_from_sfi(msg);
+
+    if (!callback_data_addr)
+        goto out_with_null;
+
+	// job callback_data
+    msg = print_fn(callback_data_addr);
+
+    external_value_addr = extract_external_value_from_js_external_object(msg);
+
+	if (!external_value_addr)
+		goto out_with_null;
+
+	bundle = *(CallbackBundle *)external_value_addr;
+	napi_cb_data = (void **)bundle.cb_data;
+	cfunc_addr = *napi_cb_data;
+    msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
+    goto out;
+
+out_with_null:
+    msg = "NONE";
+out:
+    return Napi::String::New(env, msg);
+}
+
+void* extract_js_external_object_from_api_object(const std::string& input) {
+    // XXX: external value
+	std::regex callback_regex(R"(0x[0-9a-fA-F]+(?=\s+<JSExternalObject>))");
+    std::smatch callback_match;
+    if (std::regex_search(input, callback_match, callback_regex)) {
+        std::string hex_str = callback_match[0].str();
+        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
+        return reinterpret_cast<void*>(address);
+    }
+
+    return nullptr;
+}
+
+Napi::Value extract_nan(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // Extract the 64-bit integer argument
+    uint64_t raw = info[0].As<Napi::Number>().Int64Value();
+    // Convert to pointer
+    void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
+    void *sfi_addr;
+	void *callback_data_addr;
+	void *external_value_addr;
+	void *cfunc_addr;
+	void *js_external_object_addr;
+    std::string msg;
+
+    if (!jsfunc_addr)
+        goto out_with_null;
+
+	// job JSFunction
+    msg = print_fn(jsfunc_addr);
+
+    sfi_addr = extract_sfi_pointer(msg);
+
+    if (!sfi_addr)
+        goto out_with_null;
+
+	// job SFI
+    msg = print_fn(sfi_addr);
+
+	// Get callback data from job SFI.
+    callback_data_addr = extract_callback_data_from_sfi(msg);
+
+    if (!callback_data_addr)
+        goto out_with_null;
+
+	// job callback_data = [api object]
+    msg = print_fn(callback_data_addr);
+    js_external_object_addr = extract_js_external_object_from_api_object(msg);
+
+	if (!js_external_object_addr)
+		goto out_with_null;
+
+	// Extract External Value from external object
+    msg = print_fn(js_external_object_addr);
+    external_value_addr = extract_external_value_from_js_external_object(msg);
+
+	if (!external_value_addr)
+		goto out_with_null;
+
+	// cfuncaddr == external value addr
+	cfunc_addr = external_value_addr;
+    msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
+    goto out;
+out_with_null:
+    msg = "NONE";
+out:
+    return Napi::String::New(env, msg);
+}
+
+std::string extract_name_from_jsfunction(const std::string& input) {
+    std::regex name_regex(R"(-\s*name:\s*(.+))");
+    std::smatch match;
+
+    if (std::regex_search(input, match, name_regex)) {
+        return match[1].str();
+    }
+
+    return "NONE";
+}
+
+Napi::Value extract_neon(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // Extract the 64-bit integer argument
+    uint64_t raw = info[0].As<Napi::Number>().Int64Value();
+    // Convert to pointer
+    void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
+    std::string msg;
+
+    if (!jsfunc_addr)
+        goto out_with_null;
+
+	// job JSFunction
+    msg = print_fn(jsfunc_addr);
+
+    msg = extract_name_from_jsfunction(msg);
+
+	goto out;
+out_with_null:
+    msg = "NONE";
+out:
+    return Napi::String::New(env, msg);
+}
+
+Napi::Value extract_cfunc_getset(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    // Extract the 64-bit integer argument
+    uint64_t raw = info[0].As<Napi::Number>().Int64Value();
+    // Convert to pointer
+    void* callback_data_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
+
+	void *external_value_addr;
+	void *cfunc_addr;
+	CallbackBundle bundle;
+	void **napi_cb_data;
+    std::string msg;
+
+
+    msg = print_fn(callback_data_addr);
+
+    external_value_addr = extract_external_value_from_js_external_object(msg);
+
+	if (!external_value_addr)
+		goto out_with_null;
+
+	bundle = *(CallbackBundle *)external_value_addr;
+	napi_cb_data = (void **)bundle.cb_data;
+	cfunc_addr = *napi_cb_data;
+    msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
+
+    goto out;
+
+out_with_null:
+    msg = "NONE";
+out:
+    return Napi::String::New(env, msg);
+}
 
 Napi::Value jid(const Napi::CallbackInfo& info) {
 	Napi::Env env = info.Env();
@@ -256,6 +542,31 @@ Napi::Value get_objects(const Napi::CallbackInfo& info) {
     std::vector<Local<Object>> locals;
 
     int total = snap->GetNodesCount();
+
+    for (int i = 0; i < total; i++) {
+        const HeapGraphNode* node = snap->GetNode(i);
+        if (node->GetType() != HeapGraphNode::kObject) continue;
+    
+        SnapshotObjectId id = node->GetId();
+        Local<Value> val = hp->FindObjectById(id);
+        locals.push_back(val.As<Object>());
+    
+        // --- progress bar ---
+        int width = 50;  // bar width
+        float progress = (float)(i + 1) / total;
+        int pos = (int)(width * progress);
+    
+        printf("\r[");
+        for (int j = 0; j < width; j++) {
+            if (j < pos) printf("=");
+            else if (j == pos) printf(">");
+            else printf(" ");
+        }
+        printf("] %3d%% (%d/%d)", (int)(progress * 100), i + 1, total);
+        fflush(stdout);
+    }
+    printf("\n");
+/*
     for (int i = 0; i < total; i++) {
         const HeapGraphNode* node = snap->GetNode(i);
         if (node->GetType() != HeapGraphNode::kObject) continue;
@@ -266,6 +577,7 @@ Napi::Value get_objects(const Napi::CallbackInfo& info) {
 
         printf("Progress: %d / %d nodes processed\n", i, total);
     }
+*/
 
     // final message
     printf("Done: processed %d nodes\n", total);
@@ -312,10 +624,18 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   void* handle = dlopen(NULL, RTLD_LAZY);
   if (!print_fn)
       print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringPv");
+  // Fallback, cxx11 ABI
+  if (!print_fn)
+      print_fn = (PrintObjectFn)dlsym(handle, "_Z35_v8_internal_Print_Object_To_StringB5cxx11Pv");
   exports.Set("jid", Napi::Function::New(env, jid));
   exports.Set("getcb", Napi::Function::New(env, getcb));
   exports.Set("get_objects", Napi::Function::New(env, get_objects));
   exports.Set("job_addr", Napi::Function::New(env, job_addr));
+  exports.Set("extract_fcb_invoke", Napi::Function::New(env, extract_fcb_invoke));
+  exports.Set("extract_napi", Napi::Function::New(env, extract_napi));
+  exports.Set("extract_nan", Napi::Function::New(env, extract_nan));
+  exports.Set("extract_neon", Napi::Function::New(env, extract_neon));
+  exports.Set("extract_cfunc_getset", Napi::Function::New(env, extract_cfunc_getset));
   return exports;
 }
 

@@ -30,6 +30,7 @@
     "@babel/traverse": "^7.28.4",
     "@babel/types": "^7.28.4",
     "node-addon-api": "^7.1.0",
+    "node-gyp-build": "^4.8.4",
     "yargs": "^18.0.0"
   }
 }
