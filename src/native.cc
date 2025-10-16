@@ -240,19 +240,6 @@ void* extract_external_value_from_js_external_object(const std::string& input) {
     return nullptr;
 }
 
-// void* extract_external_value_from_js_external_object(const std::string& input) {
-//     // XXX: external value
-//     std::regex callback_regex(R"(___EXTERNAL_VALUE___(.*?)___EXTERNAL_VALUE___)");
-//     std::smatch callback_match;
-//     if (std::regex_search(input, callback_match, callback_regex)) {
-//         std::string hex_str = callback_match[1].str();
-//         std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
-//         return reinterpret_cast<void*>(address);
-//     }
-// 
-//     return nullptr;
-// }
-
 Napi::Value extract_fcb_invoke(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
@@ -450,16 +437,27 @@ out:
 }
 
 std::string extract_name_from_jsfunction(const std::string& input) {
-    // XXX: external value
-    std::regex callback_regex(R"(___NAME___(.*?)___NAME___)");
-    std::smatch callback_match;
-    if (std::regex_search(input, callback_match, callback_regex)) {
-        std::string name = callback_match[1].str();
-        return name;
+    std::regex name_regex(R"(-\s*name:\s*(.+))");
+    std::smatch match;
+
+    if (std::regex_search(input, match, name_regex)) {
+        return match[1].str();
     }
 
     return "NONE";
 }
+
+// std::string extract_name_from_jsfunction(const std::string& input) {
+//     // XXX: external value
+//     std::regex callback_regex(R"(___NAME___(.*?)___NAME___)");
+//     std::smatch callback_match;
+//     if (std::regex_search(input, callback_match, callback_regex)) {
+//         std::string name = callback_match[1].str();
+//         return name;
+//     }
+// 
+//     return "NONE";
+// }
 
 Napi::Value extract_neon(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
