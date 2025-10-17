@@ -832,7 +832,6 @@ function extract_exports_addr(text) {
 function extract_ap(addr) {
   let text;
   text = mod.job_addr(addr)
-  // console.log(text)
   const getterMatch =
     text.match(/getter:[\s\S]*?(?:___CALLBACK_DATA___(0x[0-9a-f]+)|\s*(0x[0-9a-f]+)\s*<JSFunction)/i);
   const setterMatch =
@@ -867,7 +866,6 @@ function extract_ap(addr) {
 
 
 function main() {
-  console.log(dir(mod))
   const args = parseArgs();
   const analysis = new OLAAnalysis(args);
   analysis.analyze();
