@@ -93,7 +93,7 @@ std::vector<std::string> extract_foreign_data_addresses(const std::vector<void*>
     return results;
 }
 
-std::string extract_callback_and_overloads_json(const std::string& input) {
+std::vector extract_callback(const std::string& input) {
     std::string callback = "NONE";
     std::vector<void*> overloads;
     std::regex callback_regex(R"(-\s*callback:\s*(0x[0-9a-fA-F]+))");
@@ -101,28 +101,79 @@ std::string extract_callback_and_overloads_json(const std::string& input) {
     if (std::regex_search(input, callback_match, callback_regex)) {
         callback = callback_match[1].str();
     }
+    return callback;
+}
 
-/*
- *  TODO: Extract overloads from FunctionTemplateInfo address manually
- *
-    std::regex overload_block_regex(R"(___OVERLOADS___([\s\S]*?)___OVERLOADS___)");
-    std::smatch overload_block_match;
-    if (std::regex_search(input, overload_block_match, overload_block_regex)) {
-        std::string block = overload_block_match[1].str();
-
-        std::regex addr_regex(R"(0x[0-9a-fA-F]+)");
-        auto begin = std::sregex_iterator(block.begin(), block.end(), addr_regex);
-        auto end = std::sregex_iterator();
-
-        for (auto it = begin; it != end; ++it) {
-            std::string addr_str = it->str();
-            void* ptr = reinterpret_cast<void*>(std::stoull(addr_str, nullptr, 16));
-            overloads.push_back(ptr);
-        }
-    }
-*/
+std::vector<std::string> extract_overloads_from_fti(const std::string& input) {
     std::vector<std::string> overload_funcs;
+    std::vector<void*> overloads;
+    std::regex pattern(R"(-\s*rare_data:\s*(0x[0-9a-fA-F]+))");
+    std::smatch match;
+    std::string raw;
+
+    void *rare_data_adddr = NULL;
+    void* c_function_overloads_addr = NULL;
+    if (std::regex_search(input, match, pattern) && match.size() > 1) {
+        std::string hex_str = match[1].str();
+        std::uintptr_t address = std::stoull(hex_str, nullptr, 16);
+        rare_data_addr = reinterpret_cast<void*>(address);
+        printf("rare_data_addr = %p\n", rare_data_addr);
+    }
+
+    if (!rare_data_addr)
+        return overload_funcs;
+    raw = print_fn(rare_data_addr);'
+
+    std::regex pattern(R"(-\s*c_function_overloads:\s*(0x[0-9a-fA-F]+))");
+
+    if (std::regex_search(raw, match, pattern) && match.size() > 1) {
+        std::string hex_str = match[1].str();
+        address = std::stoull(hex_str, nullptr, 16);
+        void* c_function_overloads_addr = reinterpret_cast<void*>(address);
+        printf("c_function_overloads_addr = %p\n", c_function_overloads_addr);
+    }
+    if (!c_function_overloads_addr)
+        return overload_funcs;
+
+    raw = print_fn(c_function_overloads_addr);
+    std::regex pattern(R"(\d+:\s*(0x[0-9a-fA-F]+)\s*<Foreign>)");
+
+    auto begin = std::sregex_iterator(raw.begin(), raw.end(), pattern);
+    auto end   = std::sregex_iterator();
+
+    for (auto it = begin; it != end; ++it) {
+        std::string hex_str = (*it)[1].str();
+        address = std::stoull(hex_str, nullptr, 16);
+        void* ptr = reinterpret_cast<void*>(address);
+        overloads.push_back(ptr);
+        printf("Foreign address: %p\n", ptr);
+    }
+    if (overloads.empty())
+        return overload_funcs;
+
     overload_funcs = extract_foreign_data_addresses(overloads);
+    return overload_funcs;
+
+    // Construct JSON string manually
+    std::ostringstream oss;
+    oss << "{\n";
+    oss << "  \"callback\": \"" << callback << "\",\n";
+    oss << "  \"overloads\": [";
+    for (size_t i = 0; i < overload_funcs.size(); ++i) {
+        oss << "\"" << overload_funcs[i] << "\"";
+        if (i < overload_funcs.size() - 1) oss << ", ";
+    }
+    oss << "]\n}";
+    return oss.str();
+}
+
+std::string extract_callback_and_overloads_json(const std::string& input) {
+
+    std::string callback;
+    callback = extract_callback(input);
+
+    std::vector<std::string> overload_funcs;
+    overload_funcs = extract_overloads_from_fti(input);
 
     // Construct JSON string manually
     std::ostringstream oss;
@@ -172,6 +223,11 @@ Napi::Value getcb(const Napi::CallbackInfo& info) {
     msg = print_fn(fti_addr);
 
     msg = extract_callback_and_overloads_json(msg);
+
+    std::string callback;
+    callback = extract_callback(msg);
+    std::vector<std::string> overloads;
+    overloads = extract_overloads(msg);
 
     goto out;
 
