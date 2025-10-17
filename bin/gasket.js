@@ -145,12 +145,14 @@ class OLAAnalysis {
     if (res == 'NONE') {
       return;
     } else {
+      console.log(`RES = ${res}`)
       this.stats.foreign_callable_objects += 1
       const jres = JSON.parse(res)
       const cb = jres['callback']
+      if (cb == 'NONE') {
+        return;
+      }
       const overloads = jres['overloads']
-      console.log(`FQN = ${jsname}`)
-      console.log(`cb = ${cb}`)
       if (cb == '0') {
         this.state.fqn2failed[jsname] = 'NULL_CB'
         return
@@ -199,7 +201,6 @@ class OLAAnalysis {
   }
 
   extract_napi(fqn) {
-    console.log(`Extract napi called: ${fqn}`)
     const addr = this.state.fqn2addr[fqn];
     const res = mod.extract_napi(parseInt(addr));
     if (res == 'NONE') {
@@ -241,7 +242,6 @@ class OLAAnalysis {
       const dem = utils.demangleCpp(cb)
       const cls = dem.match(/<([^>]*)>/)[1];
       let fn = cls + "::" + cls.split("::").pop();
-      console.log(`fn = ${fn}`)
       let lib = this.state.addr2sym[this.state.fqn2cbaddr2[fqn]].library;
       this.addBridge(fqn, fn, lib, BridgeType.NATIVE);
     } else if (
@@ -561,13 +561,12 @@ class OLAAnalysis {
 
   analyzeModules() {
     const modules = this.getModules();
-    console.log(`List of analyzed modules :\n${modules.join('\n')}`);
+    console.log(`List of modules to analyze: \n${modules.join('\n')}`);
     for (const mod of modules) {
       this.analyzeSingle(mod, this.args.root);
       this.stats.modules.push(mod);
     }
     if (this.args.profileHeap) {
-      console.log('In this.args.AnalyzeHeap')
       this.state.reset();
       this.wasm_state.reset();
       this.analyzeHeapAfter();
@@ -718,8 +717,6 @@ class OLAAnalysis {
         this.heap_ids_after.push(addr);
       }
     }
-    console.log('after heap snapshot, object addresses = ')
-    console.log(object_addresses)
     for (const addr of this.heap_ids_after) {
       const raw = mod.job_addr(addr);
 	  if (!this.args.nativeOnly) {
@@ -730,7 +727,7 @@ class OLAAnalysis {
 		this.extractGetSetters(raw)
 	  }
     }
-    console.log(`HEAP FUNCS AFTER: ${this.heap_jsfuncs_after.length}`)
+    console.log(`Heap functions created by module load: ${this.heap_jsfuncs_after.length}`)
     console.log(JSON.stringify(this.heap_jsfuncs_after, null, 2))
     //
     // XXX: Visit the JSFunctions found

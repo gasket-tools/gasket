@@ -50,7 +50,6 @@ typedef struct {
       void* _data;
 } CallbackInfoPublic;
 
-
 void* extract_sfi_pointer(const std::string& input) {
     std::regex pattern(R"(shared_info:\s*0x([0-9a-fA-F]+))");
     std::smatch match;
@@ -63,7 +62,6 @@ void* extract_sfi_pointer(const std::string& input) {
 
     return nullptr; // Not found
 }
-
 
 void* extract_fti_pointer(const std::string& input) {
     std::regex pattern(R"(function_data:\s*0x([0-9a-fA-F]+)\s<FunctionTemplateInfo)");
@@ -79,56 +77,92 @@ void* extract_fti_pointer(const std::string& input) {
 }
 
 std::vector<std::string> extract_foreign_data_addresses(const std::vector<void*>& overloads) {
-  std::vector<std::string> results;
-  std::regex address_regex(R"(foreign address\s*:\s*(0x[0-9a-fA-F]+))");
+    std::vector<std::string> results;
+    std::regex address_regex(R"(foreign address\s*:\s*(0x[0-9a-fA-F]+))");
 
-  for (void* ptr : overloads) {
-    std::string output = print_fn(ptr);
+    for (void* ptr : overloads) {
+        std::string output = print_fn(ptr);
 
-    std::smatch match;
-    if (std::regex_search(output, match, address_regex)) {
-      results.push_back(match[1].str());
-    } else {
-      results.push_back("UNKNOWN");
+        std::smatch match;
+        if (std::regex_search(output, match, address_regex)) {
+            results.push_back(match[1].str());
+        } else {
+            results.push_back("UNKNOWN");
+        }
     }
-  }
-
-  return results;
+    return results;
 }
 
-std::string extract_callback_and_overloads_json(const std::string& input) {
+std::string extract_callback(const std::string& input) {
     std::string callback = "NONE";
-    std::vector<void*> overloads;
-
-	// std::cout << "FTI string: " << input << std::endl;
-
-    // Match callback
-	std::regex callback_regex(R"(-\s*callback:\s*(0x[0-9a-fA-F]+))");
+    std::regex callback_regex(R"(-\s*callback:\s*(0x[0-9a-fA-F]+))");
     std::smatch callback_match;
     if (std::regex_search(input, callback_match, callback_regex)) {
         callback = callback_match[1].str();
     }
+    return callback;
+}
 
-    // Match overload block and extract addresses
-    std::regex overload_block_regex(R"(___OVERLOADS___([\s\S]*?)___OVERLOADS___)");
-    std::smatch overload_block_match;
-    if (std::regex_search(input, overload_block_match, overload_block_regex)) {
-        std::string block = overload_block_match[1].str();
-  	    // std::cout << "overloads block: " << block << std::endl;
-
-        std::regex addr_regex(R"(0x[0-9a-fA-F]+)");
-        auto begin = std::sregex_iterator(block.begin(), block.end(), addr_regex);
-        auto end = std::sregex_iterator();
-
-        for (auto it = begin; it != end; ++it) {
-		    std::string addr_str = it->str();
-        	void* ptr = reinterpret_cast<void*>(std::stoull(addr_str, nullptr, 16));
-            overloads.push_back(ptr);
-        }
+std::vector<std::string> extract_overloads_from_fti(const std::string& input) {
+    std::vector<std::string> overload_funcs;
+    std::vector<void*> overloads;
+    std::regex pattern(R"(-\s*rare_data:\s*(0x[0-9a-fA-F]+))");
+    std::smatch match;
+    std::string raw;
+    std::uintptr_t address;
+    void *rare_data_addr = NULL;
+    void* c_function_overloads_addr = NULL;
+    if (std::regex_search(input, match, pattern) && match.size() > 1) {
+        std::string hex_str = match[1].str();
+        address = std::stoull(hex_str, nullptr, 16);
+        rare_data_addr = reinterpret_cast<void*>(address);
+        // printf("rare_data_addr = %p\n", rare_data_addr);
     }
 
+    if (!rare_data_addr)
+        return overload_funcs;
+    raw = print_fn(rare_data_addr);
+
+    std::regex pattern_2(R"(-\s*c_function_overloads:\s*(0x[0-9a-fA-F]+))");
+
+    if (std::regex_search(raw, match, pattern_2) && match.size() > 1) {
+        std::string hex_str = match[1].str();
+        address = std::stoull(hex_str, nullptr, 16);
+        c_function_overloads_addr = reinterpret_cast<void*>(address);
+        // printf("c_function_overloads_addr = %p\n", c_function_overloads_addr);
+    }
+    if (!c_function_overloads_addr) {
+	printf("WTF?\n");
+        return overload_funcs;
+    }
+    raw = print_fn(c_function_overloads_addr);
+    // std::regex pattern_3(R"(\d+:\s*(0x[0-9a-fA-F]+)\s*<Foreign>)");
+    std::regex pattern_3(R"(\s*\d+:\s*(0x[0-9a-fA-F]+)\s*<Foreign>)");
+
+    auto begin = std::sregex_iterator(raw.begin(), raw.end(), pattern_3);
+    auto end   = std::sregex_iterator();
+
+    for (auto it = begin; it != end; ++it) {
+        std::string hex_str = (*it)[1].str();
+        address = std::stoull(hex_str, nullptr, 16);
+        void* ptr = reinterpret_cast<void*>(address);
+        overloads.push_back(ptr);
+        // printf("Foreign address: %p\n", ptr);
+    }
+    if (overloads.empty())
+        return overload_funcs;
+
+    overload_funcs = extract_foreign_data_addresses(overloads);
+    return overload_funcs;
+}
+
+std::string extract_callback_and_overloads_json(const std::string& input) {
+
+    std::string callback;
+    callback = extract_callback(input);
+
     std::vector<std::string> overload_funcs;
-	overload_funcs = extract_foreign_data_addresses(overloads);
+    overload_funcs = extract_overloads_from_fti(input);
 
     // Construct JSON string manually
     std::ostringstream oss;
@@ -145,15 +179,10 @@ std::string extract_callback_and_overloads_json(const std::string& input) {
 
 
 Napi::Value getcb(const Napi::CallbackInfo& info) {
-	Napi::Env env = info.Env();
-	std::string msg;
+    Napi::Env env = info.Env();
+    std::string msg;
     void *sfi_addr;
     void *fti_addr;
-
-    // void *address;
-    // auto new_info = (CallbackInfoPublic&)(info);
-	// auto x = *(new_info._argv);
-	// jsfunc_addr = *(void **)x;
 
     if (info.Length() < 1 || !info[0].IsNumber()) {
         Napi::TypeError::New(env, "Expected a number").ThrowAsJavaScriptException();
@@ -188,9 +217,9 @@ Napi::Value getcb(const Napi::CallbackInfo& info) {
 
 out_with_null:
     msg = "NONE";
-	return Napi::String::New(env, msg);
+    return Napi::String::New(env, msg);
 out:
-  return Napi::String::New(env, msg);
+    return Napi::String::New(env, msg);
 }
 
 Napi::Value job_addr(const Napi::CallbackInfo& info) {
@@ -207,8 +236,12 @@ Napi::Value job_addr(const Napi::CallbackInfo& info) {
     // Convert to pointer
     void* address = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
 
-    // Call your internal helper
-    std::string msg = print_fn(address);
+    bool sane = ((((uintptr_t)address >> 47) + 1) & ~1ULL) == 0;
+    std::string msg;
+    if (sane)
+        msg = print_fn(address);
+    else
+        msg = "INVALID_ADDRESS";
 
     // Return JS string
     return Napi::String::New(env, msg);
@@ -254,43 +287,40 @@ Napi::Value extract_fcb_invoke(const Napi::CallbackInfo& info) {
     void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
 
     void *sfi_addr;
-	void *callback_data_addr;
-	void *external_value_addr;
-	void *cfunc_addr;
-	CallbackBundle bundle;
+    void *callback_data_addr;
+    void *external_value_addr;
+    void *cfunc_addr;
+    CallbackBundle bundle;
     std::string msg;
 
     if (!jsfunc_addr)
         goto out_with_null;
 
-	// job JSFunction
     msg = print_fn(jsfunc_addr);
-
     sfi_addr = extract_sfi_pointer(msg);
 
     if (!sfi_addr)
         goto out_with_null;
 
-	// job SFI
+    // job SFI
     msg = print_fn(sfi_addr);
-
-	// Get callback data from job SFI
+    // Get callback data from job SFI
     callback_data_addr = extract_callback_data_from_sfi(msg);
 
     if (!callback_data_addr)
         goto out_with_null;
 
-	// job callback_data
+    // job callback_data
     msg = print_fn(callback_data_addr);
 
     external_value_addr = extract_external_value_from_js_external_object(msg);
 
-	if (!external_value_addr)
-		goto out_with_null;
+    if (!external_value_addr)
+        goto out_with_null;
 
-	bundle = *(CallbackBundle *)external_value_addr;
-	cfunc_addr = (void *)bundle.cb;
-	msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
+    bundle = *(CallbackBundle *)external_value_addr;
+    cfunc_addr = (void *)bundle.cb;
+    msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
     goto out;
 
 out_with_null:
@@ -312,45 +342,43 @@ Napi::Value extract_napi(const Napi::CallbackInfo& info) {
     // Convert to pointer
     void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
     void *sfi_addr;
-	void *callback_data_addr;
-	void *external_value_addr;
-	void *cfunc_addr;
-	CallbackBundle bundle;
-	// Napi_CallbackData napi_cb_data;
-	void **napi_cb_data;
+    void *callback_data_addr;
+    void *external_value_addr;
+    void *cfunc_addr;
+    CallbackBundle bundle;
+    // Napi_CallbackData napi_cb_data;
+    void **napi_cb_data;
     std::string msg;
 
     if (!jsfunc_addr)
         goto out_with_null;
 
-	// job JSFunction
+    // job JSFunction
     msg = print_fn(jsfunc_addr);
-
     sfi_addr = extract_sfi_pointer(msg);
 
     if (!sfi_addr)
         goto out_with_null;
 
-	// job SFI
+    // job SFI
     msg = print_fn(sfi_addr);
-
-	// Get callback data from job SFI.
+    // Get callback data from job SFI.
     callback_data_addr = extract_callback_data_from_sfi(msg);
 
     if (!callback_data_addr)
         goto out_with_null;
 
-	// job callback_data
+    // job callback_data
     msg = print_fn(callback_data_addr);
 
     external_value_addr = extract_external_value_from_js_external_object(msg);
 
-	if (!external_value_addr)
-		goto out_with_null;
+    if (!external_value_addr)
+        goto out_with_null;
 
-	bundle = *(CallbackBundle *)external_value_addr;
-	napi_cb_data = (void **)bundle.cb_data;
-	cfunc_addr = *napi_cb_data;
+    bundle = *(CallbackBundle *)external_value_addr;
+    napi_cb_data = (void **)bundle.cb_data;
+    cfunc_addr = *napi_cb_data;
     msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
     goto out;
 
@@ -361,8 +389,7 @@ out:
 }
 
 void* extract_js_external_object_from_api_object(const std::string& input) {
-    // XXX: external value
-	std::regex callback_regex(R"(0x[0-9a-fA-F]+(?=\s+<JSExternalObject>))");
+    std::regex callback_regex(R"(0x[0-9a-fA-F]+(?=\s+<JSExternalObject>))");
     std::smatch callback_match;
     if (std::regex_search(input, callback_match, callback_regex)) {
         std::string hex_str = callback_match[0].str();
@@ -386,16 +413,16 @@ Napi::Value extract_nan(const Napi::CallbackInfo& info) {
     // Convert to pointer
     void* jsfunc_addr = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
     void *sfi_addr;
-	void *callback_data_addr;
-	void *external_value_addr;
-	void *cfunc_addr;
-	void *js_external_object_addr;
+    void *callback_data_addr;
+    void *external_value_addr;
+    void *cfunc_addr;
+    void *js_external_object_addr;
     std::string msg;
 
     if (!jsfunc_addr)
         goto out_with_null;
 
-	// job JSFunction
+    // job JSFunction
     msg = print_fn(jsfunc_addr);
 
     sfi_addr = extract_sfi_pointer(msg);
@@ -403,31 +430,31 @@ Napi::Value extract_nan(const Napi::CallbackInfo& info) {
     if (!sfi_addr)
         goto out_with_null;
 
-	// job SFI
+    // job SFI
     msg = print_fn(sfi_addr);
 
-	// Get callback data from job SFI.
+    // Get callback data from job SFI.
     callback_data_addr = extract_callback_data_from_sfi(msg);
 
     if (!callback_data_addr)
         goto out_with_null;
 
-	// job callback_data = [api object]
+    // job callback_data = [api object]
     msg = print_fn(callback_data_addr);
     js_external_object_addr = extract_js_external_object_from_api_object(msg);
 
-	if (!js_external_object_addr)
-		goto out_with_null;
+    if (!js_external_object_addr)
+        goto out_with_null;
 
-	// Extract External Value from external object
+    // Extract External Value from external object
     msg = print_fn(js_external_object_addr);
     external_value_addr = extract_external_value_from_js_external_object(msg);
 
-	if (!external_value_addr)
-		goto out_with_null;
+    if (!external_value_addr)
+        goto out_with_null;
 
-	// cfuncaddr == external value addr
-	cfunc_addr = external_value_addr;
+    // cfuncaddr == external value addr
+    cfunc_addr = external_value_addr;
     msg = std::to_string(reinterpret_cast<uintptr_t>(cfunc_addr));
     goto out;
 out_with_null:
@@ -566,31 +593,9 @@ Napi::Value get_objects(const Napi::CallbackInfo& info) {
         fflush(stdout);
     }
     printf("\n");
-/*
-    for (int i = 0; i < total; i++) {
-        const HeapGraphNode* node = snap->GetNode(i);
-        if (node->GetType() != HeapGraphNode::kObject) continue;
-
-        SnapshotObjectId id = node->GetId();
-        Local<Value> val = hp->FindObjectById(id);
-        locals.push_back(val.As<Object>());
-
-        printf("Progress: %d / %d nodes processed\n", i, total);
-    }
-*/
 
     // final message
     printf("Done: processed %d nodes\n", total);
-
-//     for (int i = 0; i < snap->GetNodesCount(); i++) {
-//       const HeapGraphNode* node = snap->GetNode(i);
-//       if (node->GetType() != HeapGraphNode::kObject) continue;
-// 
-//       SnapshotObjectId id = node->GetId();
-// 
-//       Local<Value> val = hp->FindObjectById(id);
-//       locals.push_back(val.As<Object>());
-//     }
 
     std::vector<void *> addresses;
     for (auto obj : locals) {
@@ -640,4 +645,3 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
 }
 
 NODE_API_MODULE(native, Init)
-
