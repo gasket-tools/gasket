@@ -145,9 +145,13 @@ class OLAAnalysis {
     if (res == 'NONE') {
       return;
     } else {
+      console.log(`RES = ${res}`)
       this.stats.foreign_callable_objects += 1
       const jres = JSON.parse(res)
       const cb = jres['callback']
+      if (cb == 'NONE') {
+        return;
+      }
       const overloads = jres['overloads']
       if (cb == '0') {
         this.state.fqn2failed[jsname] = 'NULL_CB'
