@@ -196,8 +196,12 @@ Napi::Value job_addr(const Napi::CallbackInfo& info) {
     // Convert to pointer
     void* address = reinterpret_cast<void*>(static_cast<uintptr_t>(raw));
 
-    // Call your internal helper
-    std::string msg = print_fn(address);
+    bool sane = ((((uintptr_t)jsfunc_addr >> 47) + 1) & ~1ULL) == 0;
+    std::string msg;
+    if (sane)
+        msg = print_fn(address);
+    else
+        msg = "INVALID_ADDRESS";
 
     // Return JS string
     return Napi::String::New(env, msg);
