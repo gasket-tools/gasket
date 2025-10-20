@@ -14,7 +14,6 @@ import objects
 
 log = logging.getLogger(__name__)
 
-# EXCLUDE_LIBS = [str(Path(sys.executable).resolve())]
 EXCLUDE_LIBS = []
 
 GDB_PYTHON_SCRIPT_HEADER = """
@@ -78,19 +77,19 @@ def parse_args():
         "-p",
         "--pid",
         default=None,
-        help=("Output file. Example --output bridges.json"),
+        help=("PID of the process to attach to"),
     )
     p.add_argument(
         "-o",
         "--output",
         default=None,
-        help=("Output file. Example --output bridges.json"),
+        help=("Output file. Example --output resolved.json"),
     )
     p.add_argument(
         "-i",
         "--input",
         default=None,
-        help=("Absolute path to the candidates JSON file."),
+        help=("Absolute path to the input file."),
     )
 
     return p.parse_args()
@@ -109,25 +108,11 @@ def run_gdb(symbol_addresses, target_pid):
         cmd_file.write(script)
         cmd_file.flush()
 
-        print("script = %s" % script)
+        # print("script = %s" % script)
 
         # XXX: Need sudo, because otherwise can't trace process.
         gdb_launch_cmd = f'sudo gdb --batch -ex "source {cmd_file_path}" --pid {target_pid}'
         # print("LAUNCH_CMD = %s" % gdb_launch_cmd)
-        # try:
-        #     ret, out, err = utils.run_cmd(gdb_launch_cmd, timeout=None, shell=True)
-        # except Exception as e:
-        #     log.error(e)
-        #     raise
-        # if ret != 0:
-        #     log.error(f"cmd {cmd} returned non-zero exit code {ret}")
-        #     log.info(out)
-        #     log.info(err)
-        #     raise RuntimeError('GDB RUN FAILED')
-        #
-        # return out
-
-        # Use shell=True plus a single argument string cause otherwise GDB acts up.
 
         try:
             fout = tempfile.NamedTemporaryFile(delete=False)
@@ -150,8 +135,8 @@ def run_gdb(symbol_addresses, target_pid):
         stderr = ferr.read()
         log.debug(fout.name)
         log.debug(ferr.name)
-        log.info(f"STDOUT = {stdout}")
-        log.info(f"STDERR = {stderr}")
+        # log.info(f"STDOUT = {stdout}")
+        # log.info(f"STDERR = {stderr}")
         fout.close()
         ferr.close()
         try:
@@ -186,11 +171,6 @@ def parse_gdb_line(line):
         log.debug("Library: %s" % library)
 
         ret = objects.PyCHop(None, address, c_name, section, library)
-        # if self.lib_excluded(library):
-        #     self.ignored_libs.add(library)
-        #     ret = None
-        # else:
-        #     self.good_libs.add(library)
     else:
         log.debug(f"Could not match pat for line: {line}")
 
@@ -207,18 +187,18 @@ class Analyzer():
     def process(self):
         with open(self.input_file, 'r') as infile:
             self.symbol_addresses = json.loads(infile.read())
-        log.info(f'ADDRESSES = {self.symbol_addresses}')
-        log.info('Running GDB')
+        log.debug(f'ADDRESSES = {self.symbol_addresses}')
+        log.debug('Running GDB')
         gdb_output = run_gdb(self.symbol_addresses, self.target_pid)
         for line in gdb_output.splitlines():
             hop = parse_gdb_line(line)
             if hop is not None:
                 self.hops.append(hop)
         if (len(self.symbol_addresses) != len(self.hops)):
-            log.info(("len(symbol_addresses) = %s != %s = len(hops)"
+            log.debug(("len(symbol_addresses) = %s != %s = len(hops)"
                    % (len(self.symbol_addresses), len(self.hops))))
         else:
-            log.info("len(hops) = %s" % len(self.hops))
+            log.debug("len(hops) = %s" % len(self.hops))
 
         bridges = []
 
@@ -230,51 +210,6 @@ class Analyzer():
             self.resolved[address] = d
 
 
-        # for p in self.pyname_addr_pairs:
-        #     found = False
-        #     for h in self.hops:
-        #         if p["address"] == h.address:
-        #             found = True
-        #             if h.library not in EXCLUDE_LIBS and h.library not in self.ignored_libs:
-        #                 pkg_ver_uuid = os.path.basename(self.sysdir_path)
-        #                 root_norm = os.path.normpath(self.sysdir_path)
-        #                 lib_norm = os.path.normpath(h.library)
-        #                 # XXX: Ensure jump lib is contained in root of installed packages
-        #                 if os.path.commonpath([root_norm, lib_norm]) == root_norm:
-        #                     jl_clean = os.path.relpath(h.library, start=self.sysdir_path)
-        #                     bridges.append(objects.PyCBridge(p['pyname'], h.cfunc, jl_clean))
-        #                     self.jump_libs.add(jl_clean)
-        #                 else:
-        #                     log.debug(f"{lib_norm} is not child of root {root_norm}. Ignoring...")
-        #                     self.ignored_libs.add(lib_norm)
-        #             h.pyname = p["pyname"]
-        #             continue
-        #     if not found:
-        #         log.warning(f"No symbol found for pyname {p['pyname']}")
-        #         pass
-                # log.warning(f"No symbol found for pyname {p['pyname']}")
-
-        # # Match addresses to their resolved symbols
-        # for p in self.pyname_addr_pairs:
-        #     # log.info("LOOKING UP %s of type %s " % (p["address"], type(p["address"])))
-        #     for h in self.hops:
-        #         # log.info("COMPARING WITH %s of type %s " % (h.address, type(h.address)))
-        #         if p["address"] == h.address:
-        #             if h.library not in EXCLUDE_LIBS:
-        #                 bridges.append(objects.PyCBridge(p['pyname'], h.cfunc, h.library))
-        #             # log.info("FOUND")
-        #             h.pyname = p["pyname"]
-        #             continue
-        #     # break
-        # result = {'count_internal': None, 'count_external': None, 'jump_libs': list(self.jump_libs),
-        #           'ignored_libs': list(self.ignored_libs), 'internal': [], 'external': []}
-        # for b in bridges:
-        #     if b.pyname.startswith('//'):
-        #         result['external'].append(b.to_dict())
-        #     else:
-        #         result['internal'].append(b.to_dict())
-        # result['count_internal'] = len(result['internal'])
-        # result['count_external'] = len(result['external'])
         if self.output_file is None:
             log.info(json.dumps(self.resolved, indent=2))
         else:

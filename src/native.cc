@@ -116,7 +116,6 @@ std::vector<std::string> extract_overloads_from_fti(const std::string& input) {
         std::string hex_str = match[1].str();
         address = std::stoull(hex_str, nullptr, 16);
         rare_data_addr = reinterpret_cast<void*>(address);
-        // printf("rare_data_addr = %p\n", rare_data_addr);
     }
 
     if (!rare_data_addr)
@@ -129,14 +128,11 @@ std::vector<std::string> extract_overloads_from_fti(const std::string& input) {
         std::string hex_str = match[1].str();
         address = std::stoull(hex_str, nullptr, 16);
         c_function_overloads_addr = reinterpret_cast<void*>(address);
-        // printf("c_function_overloads_addr = %p\n", c_function_overloads_addr);
     }
     if (!c_function_overloads_addr) {
-	printf("WTF?\n");
         return overload_funcs;
     }
     raw = print_fn(c_function_overloads_addr);
-    // std::regex pattern_3(R"(\d+:\s*(0x[0-9a-fA-F]+)\s*<Foreign>)");
     std::regex pattern_3(R"(\s*\d+:\s*(0x[0-9a-fA-F]+)\s*<Foreign>)");
 
     auto begin = std::sregex_iterator(raw.begin(), raw.end(), pattern_3);
@@ -147,7 +143,6 @@ std::vector<std::string> extract_overloads_from_fti(const std::string& input) {
         address = std::stoull(hex_str, nullptr, 16);
         void* ptr = reinterpret_cast<void*>(address);
         overloads.push_back(ptr);
-        // printf("Foreign address: %p\n", ptr);
     }
     if (overloads.empty())
         return overload_funcs;
