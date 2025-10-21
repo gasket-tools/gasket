@@ -11,14 +11,12 @@ const parser = mod.parser;
 const traverse = mod.traverseMod.default;
 const generate = mod.generateMod.default;
 
-
 const ModuleType = Object.freeze({
   MIXED: "mixed",
   CJS: "cjs",
   ESM: "esm",
-  UNKNOWN: "uknown"
+  UNKNOWN: "uknown",
 });
-
 
 function parse(code) {
   return parser.parse(code, {
@@ -39,9 +37,8 @@ function parse(code) {
 function saveChanges(originalFilePath, originalCode, transformedCode) {
   const backupPath = originalFilePath + ".backup";
   fs.writeFileSync(backupPath, originalCode, "utf8");
-  fs.writeFileSync(originalFilePath, transformedCode, "utf8")
+  fs.writeFileSync(originalFilePath, transformedCode, "utf8");
 }
-
 
 function getModuleType(ast) {
   let hasESM = false;
@@ -99,12 +96,9 @@ function getModuleType(ast) {
   return ModuleType.UNKNOWN;
 }
 
-
 function isRequireCall(n) {
   return (
-    n &&
-    t.isCallExpression(n) &&
-    t.isIdentifier(n.callee, { name: "require" })
+    n && t.isCallExpression(n) && t.isIdentifier(n.callee, { name: "require" })
   );
 }
 
@@ -176,15 +170,13 @@ function recordExportedObjects(ast) {
   });
   return {
     exported: alreadyExported,
-    imported: imported
+    imported: imported,
   };
 }
 
-
 function cjsTransform(filePath, code, ast) {
-
   // Pass 1: record imported names and already-exported locals
-  const {exported, imported} = recordExportedObjects(ast);
+  const { exported, imported } = recordExportedObjects(ast);
   const unexportedObjects = new Set();
   // Pass 2: in-place export of eligible top-level variable declarations
   traverse(ast, {
@@ -214,7 +206,7 @@ function cjsTransform(filePath, code, ast) {
   let transformedCode = code;
   let transformed = false;
   for (const unexportedObj of unexportedObjects) {
-    transformedCode = `${transformedCode}\nmodule.exports.${unexportedObj} = ${unexportedObj};`
+    transformedCode = `${transformedCode}\nmodule.exports.${unexportedObj} = ${unexportedObj};`;
     transformed = true;
   }
   if (transformed) {
@@ -223,9 +215,8 @@ function cjsTransform(filePath, code, ast) {
   return transformed;
 }
 
-
 function esmTransform(filePath, code, ast) {
-  const {exported, imported} = recordExportedObjects(ast);
+  const { exported, imported } = recordExportedObjects(ast);
   let transformed = false;
   traverse(ast, {
     VariableDeclaration(path) {
@@ -241,8 +232,8 @@ function esmTransform(filePath, code, ast) {
         return;
       }
 
-      const id = node.declarations[0].id;        // Identifier
-      const init = node.declarations[0].init;     // RHS (may be null)
+      const id = node.declarations[0].id; // Identifier
+      const init = node.declarations[0].init; // RHS (may be null)
       const name = id.name;
 
       // Skip: require(...) initializers, imported names, or already exported
@@ -274,9 +265,7 @@ function esmTransform(filePath, code, ast) {
     saveChanges(filePath, code, transformedCode);
   }
   return transformed;
-
 }
-
 
 export default function transform(filePath) {
   const code = fs.readFileSync(filePath, "utf8");
@@ -303,7 +292,6 @@ export function revertChanges(filePath) {
     fs.renameSync(backupPath, filePath);
   }
 }
-
 
 if (process.argv[1] === mod.__filename) {
   const file = process.argv[2];

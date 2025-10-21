@@ -76,13 +76,12 @@ export const SimplePropertyRetriever = {
   },
 };
 
-
 export default function dir(obj) {
   if (obj instanceof Uint8Array) {
     return [];
   }
   if (obj === null) {
-    return []
+    return [];
   }
   return SimplePropertyRetriever.getOwnAndPrototypeEnumAndNonEnumProps(obj);
 }

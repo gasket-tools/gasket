@@ -5,7 +5,9 @@
   "type": "module",
   "bin": {
     "gasket": "./bin/gasket.js",
-    "gasket-deno": "./bin/gasket-deno.js"
+    "gasket-deno": "./bin/gasket-deno.js",
+    "resolve-syms": "./scripts/resolve_syms.py",
+    "get-loaded-libs": "./scripts/get_loaded_libs.py"
   },
   "scripts": {
     "install": "node-gyp rebuild",

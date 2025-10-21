@@ -4,10 +4,12 @@ if (typeof Deno !== "undefined" && Deno.version?.deno) {
 } else {
   nodeGypBuild = (await import("node-gyp-build")).default;
 }
-import { fileURLToPath  } from "node:url";
+import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
-const native = nodeGypBuild(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
+const native = nodeGypBuild(
+  resolve(dirname(fileURLToPath(import.meta.url)), ".."),
+);
 
 export const addon = native;
 

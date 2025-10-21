@@ -1,0 +1,80 @@
+FROM ubuntu:24.04
+SHELL ["/bin/bash", "-c"]
+
+ENV NODE_VERSION=22.21.0
+ENV DENO_TAG=v2.5.4
+ENV DENO_CORE_TAG=0.362.0
+ENV RUSTY_V8_TAG=v140.2.0
+
+ENV TZ=Europe/Athens
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apt update -yq && apt upgrade -yq
+RUN apt install -y vim software-properties-common git sudo wget locales curl \
+  build-essential
+RUN sudo locale-gen "en_US.UTF-8"
+RUN update-locale LC_ALL="en_US.UTF-8"
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+RUN apt install -yq python3-pip
+
+# Create the gasket user.
+RUN useradd -ms /bin/bash gasket && \
+    echo gasket:gasket | chpasswd && \
+    cp /etc/sudoers /etc/sudoers.bak && \
+    echo 'gasket ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers
+USER gasket
+ENV HOME=/home/gasket
+
+USER root
+RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
+  && case "${dpkgArch##*-}" in \
+    amd64) ARCH='x64';; \
+    ppc64el) ARCH='ppc64le';; \
+    s390x) ARCH='s390x';; \
+    arm64) ARCH='arm64';; \
+    armhf) ARCH='armv7l';; \
+    i386) ARCH='x86';; \
+    *) echo "unsupported architecture"; exit 1 ;; \
+  esac \
+  # use pre-existing gpg directory, see https://github.com/nodejs/docker-node/pull/1895#issuecomment-1550389150
+  && export GNUPGHOME="$(mktemp -d)" \
+  # gpg keys listed at https://github.com/nodejs/node#release-keys
+  && set -ex \
+  && for key in \
+    5BE8A3F6C8A5C01D106C0AD820B1A390B168D356 \
+    DD792F5973C6DE52C432CBDAC77ABFA00DDBF2B7 \
+    CC68F5A3106FF448322E48ED27F5E38D5B0A215F \
+    8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600 \
+    890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4 \
+    C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
+    108F52B48DB57BB0CC439B2997B01419BD92F80A \
+    A363A499291CBBC940DD62E41F10027AF002F8B0 \
+  ; do \
+      { gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" && gpg --batch --fingerprint "$key"; } || \
+      { gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" && gpg --batch --fingerprint "$key"; } ; \
+  done \
+  && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-$ARCH.tar.xz" \
+  && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
+  && gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
+  && gpgconf --kill all \
+  && rm -rf "$GNUPGHOME" \
+  && grep " node-v$NODE_VERSION-linux-$ARCH.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
+  && tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr/local --strip-components=1 --no-same-owner \
+  && rm "node-v$NODE_VERSION-linux-$ARCH.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt \
+  && ln -s /usr/local/bin/node /usr/local/bin/nodejs \
+  # smoke tests
+  && node --version \
+  && npm --version \
+  && rm -rf /tmp/*
+
+
+# Install Gasket
+USER root
+ENV GASKET_ROOT=/home/gasket/gasket
+WORKDIR ${GASKET_ROOT}
+# RUN git clone -b wip-grgalex-rebase --single-branch https://github.com/gasket-tools/gasket.git $GASKET_ROOT
+# RUN git clone https://github.com/gasket-tools/gasket.git
+# RUN npm install node-gyp
+# RUN npm install -g node-addon-api
+
+ENV GASKET_ROOT=${HOME}/gasket
+WORKDIR ${HOME}

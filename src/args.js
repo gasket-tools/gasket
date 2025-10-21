@@ -1,49 +1,49 @@
 import yargz from "yargs/yargs";
-import { hideBin  } from "yargs/helpers";
-
+import { hideBin } from "yargs/helpers";
 
 export default function parseArgs() {
   const yargs = yargz(hideBin(process.argv));
-	if (process.argv.length <= 2) {
-		yargs.showHelp();
-		process.exit(0);
-	}
+  if (process.argv.length <= 2) {
+    yargs.showHelp();
+    process.exit(0);
+  }
   return yargs
-    .option('root', {
-      alias: 'r',
-      type: 'string',
-      description: 'Package root',
-      demandOption: false
+    .option("root", {
+      alias: "r",
+      type: "string",
+      description: "Package root",
+      demandOption: false,
     })
-    .option('module', {
-      alias: 'm',
-      type: 'string',
-      description: 'Module to analyze',
-      demandOption: false
+    .option("module", {
+      alias: "m",
+      type: "string",
+      description: "Module to analyze",
+      demandOption: false,
     })
     .option("internal", {
       type: "boolean",
-      description: "Whether the analyzed module is an internal binding (to be used with -m)",
-      default: false
+      description:
+        "Whether the analyzed module is an internal binding (to be used with -m)",
+      default: false,
     })
-    .option('output', {
-      alias: 'o',
-      type: 'string',
-      description: 'output file',
+    .option("output", {
+      alias: "o",
+      type: "string",
+      description: "output file",
     })
     .option("profile-heap", {
-      alias: 'p',
+      alias: "p",
       type: "boolean",
       describe: "Profile the V8 Heap for unexported objects",
-      default: false
+      default: false,
     })
     .option("native-only", {
       type: "boolean",
-      describe: "Detect only JS-to-Native bridges"
+      describe: "Detect only JS-to-Native bridges",
     })
     .option("wasm-only", {
       type: "boolean",
-      describe: "Detect only JS-to-Wasm bridges"
+      describe: "Detect only JS-to-Wasm bridges",
     })
     .option("force-export", {
       type: "boolean",
@@ -59,6 +59,5 @@ export default function parseArgs() {
     })
     .strict()
     .showHelpOnFail(true)
-    .help()
-    .argv;
+    .help().argv;
 }
