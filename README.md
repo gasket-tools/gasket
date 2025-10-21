@@ -240,20 +240,24 @@ containing the following information:
 
 
 ## Optional Arguments
-1. Native-only Analysis (`--native-only`)
+1. Native-only Analysis (`--native-only`):
+
 Only analyze `.node` native extension modules
 for `js-to-native` bridges.
 
-2. WASM-only Analysis (`--wasm-only`)
+2. WASM-only Analysis (`--wasm-only`):
+
 Only analyze JavaScript source files for `js-to-wasm` bridges.
 
-3. Force Export of JavaScript Variables (`--force-export`)
+3. Force Export of JavaScript Variables (`--force-export`):
+
 Creates a modified copy of every JavaScript source file before analyzing,
 with every variable explicitly exported.
 This increases the amount of objects that are visible to Gasket
 for introspection.
 
-4. Use the V8 Heap Profiler (`-p/--profile-heap`)
+4. Use the V8 Heap Profiler (`-p/--profile-heap`):
+
 Takes a snapshot of the V8 heap after importing the modules
 under analysis. This ensures that *all* objects are available
 to Gasket for introspection, whether they stem from
@@ -261,10 +265,12 @@ native extension modules or JavaScript source files.
 Setting this option significantly increases Gasket's execution time
 to ~10 minutes.
 
-5. Analyze a single {JS, extension} module (`-m/--module`)
+5. Analyze a single {JS, extension} module (`-m/--module`):
+
 Only load and analyze a single module located at the provided path.
 
-5. Analyze an internal Node.JS module (`--internal` + `-m/--module` combination)
+5. Analyze an internal Node.JS module (`--internal` + `-m/--module` combination):
+
 Load and analyze an internal Node.JS module.
 For example, to analyze the `fs` module,
 we can run `gasket -m fs --internal -o fs_bridges.json`.
