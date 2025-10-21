@@ -1,3 +1,5 @@
+![Node.js Version](https://img.shields.io/badge/node-%3E%3D21.x-brightgreen)
+
 # Gasket
 
 Gasket is a command-line tool for uncovering bridges between JavaScript and
