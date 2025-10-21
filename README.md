@@ -127,18 +127,28 @@ Options:
 ```
 
 ### Analyze a Node.JS Package
-1. (Optional) Install the target package from npm
-> Replace \<pkg> with your desired package name.
+1. (Optional) Install the target package from npm into a 
+> Replace \<dir> and \<pkg> with your desired package name.
 ```
-npm install --prefix /tmp/packages <pkg>
+npm install --prefix <dir> <pkg>
+```
+
+For example, to install the `sqlite3` package in `/tmp/packages`, run:
+```
+npm install --prefix /tmp/packages sqlite3
 ```
 2. Run Gasket
 > In default mode, this will search for both Native and WASM bridges.
 ```
-gasket -r /tmp/packages/node_modules/<package> -o bridges.json
+gasket -r <dir>/node_modules/<package> -o bridges.json
 ```
-3. Examine Gasket's output:
 
+For example, to analyze the installed `sqlite3` package, run:
+```
+gasket -r /tmp/packages/node_modules/sqlite3 -o bridges.json
+```
+
+3. Examine Gasket's output:
 Gasket stores its results in a JSON file that includes the following information:
 
 * `objects_examined`: Number of objects examined by `Gasket`.
@@ -204,6 +214,7 @@ containing the following information:
     },
 ... (more bridges)
 ```
+
 5. Sample output for the `tiny-secp256k1` package (WASM bridges):
 ```
 {
@@ -236,7 +247,16 @@ containing the following information:
 ```
 
 # Usage (Deno)
-1. Fetch the source code repository of the package you want to analyze
+1. Fetch the source code of the package you want to analyze (e.g., `@db/sqlite`):
+> Packages on deno.land/jsr.io contain links to the corresponding source code repositories.
+```
+git clone https://github.com/denodrivers/sqlite3 deno-sqlite3
+```
+
+2. Analyze the package using `gasket-deno`:
+```
+gasket-deno -r deno-sqlite3 -o deno-bridges.json
+```
 
 
 ## Optional Arguments
@@ -251,19 +271,19 @@ Only analyze JavaScript source files for `js-to-wasm` bridges.
 
 ### 3. Force Export of JavaScript Variables (`--force-export`):
 
-Creates a modified copy of every JavaScript source file before analyzing,
-with every variable explicitly exported.
-This increases the amount of objects that are visible to Gasket
-for introspection.
+Before analysis,
+create modified copies of JavaScript source files with all variables explicitly exported.
+This exposes more objects to Gasket for introspection
+and may uncover otherwise missed bridges.
 
 ### 4. Use the V8 Heap Profiler (`-p/--profile-heap`):
+> Setting this option significantly increases Gasket's execution time
+to ~10 minutes.
 
-Takes a snapshot of the V8 heap after importing the modules
+Take a snapshot of the V8 heap after importing the modules
 under analysis. This ensures that *all* objects are available
 to Gasket for introspection, whether they stem from
 native extension modules or JavaScript source files.
-Setting this option significantly increases Gasket's execution time
-to ~10 minutes.
 
 ### 5. Analyze a single {JS, extension} module (`-m/--module`):
 
