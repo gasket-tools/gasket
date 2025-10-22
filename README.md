@@ -1,4 +1,4 @@
-![Node.js Version](https://img.shields.io/badge/node-%3E%3D21.x-brightgreen)
+![Node.js Version](https://img.shields.io/badge/Node.js-%3E%3D21.x-brightgreen)
 
 # Gasket
 
@@ -34,7 +34,7 @@ powerful cross-language analyses, including:
   - [Test (Local)](#test_local)
 
 # Requirements
-- Node.JS >= 21.x
+- Node.js >= 21.x
 - g++
 
 # Getting Started
@@ -105,7 +105,7 @@ docker build ...
 ```
 
 
-# Usage (Node.JS)
+# Usage (Node.js)
 The `gasket` executable provides a command-line interface that allows you
 to analyze a given *installed* `npm` package
 and identify its bridges:
@@ -128,7 +128,7 @@ Options:
 
 ```
 
-### Analyze a Node.JS Package
+### Analyze a Node.js Package
 1. (Optional) Install the target package from npm into a 
 > Replace \<dir> and \<pkg> with your desired package name.
 ```
@@ -291,9 +291,9 @@ native extension modules or JavaScript source files.
 
 Only load and analyze a single module located at the provided path.
 
-### 5. Analyze an internal Node.JS module (`--internal` + `-m/--module` combination):
+### 5. Analyze an internal Node.js module (`--internal` + `-m/--module` combination):
 
-Load and analyze an internal Node.JS module.
+Load and analyze an internal Node.js module.
 For example, to analyze the `fs` module,
 you can run:
 ```bash
