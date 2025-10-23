@@ -1,0 +1,26 @@
+From 2680fab7fbe97708a8be1de65340d61f74edef88 Mon Sep 17 00:00:00 2001
+From: Georgios Alexopoulos <grgalex@ba.uoa.gr>
+Date: Wed, 22 Oct 2025 16:08:58 +0300
+Subject: [PATCH] Ensure V8 Functions ship in static build
+
+Signed-off-by: Georgios Alexopoulos <grgalex@ba.uoa.gr>
+---
+ include/v8config.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/v8config.h b/include/v8config.h
+index 02721dda97..0e77d49f6d 100644
+--- a/include/v8config.h
++++ b/include/v8config.h
+@@ -797,7 +797,7 @@ V8 shared library set USING_V8_SHARED.
+ #if V8_HAS_ATTRIBUTE_VISIBILITY && (defined(BUILDING_V8_SHARED) || USING_V8_SHARED)
+ # define V8_EXPORT __attribute__((visibility("default")))
+ #else
+-# define V8_EXPORT
++# define V8_EXPORT __attribute__((visibility("default")))
+ # endif  // V8_HAS_ATTRIBUTE_VISIBILITY && ...
+ 
+ #endif  // V8_OS_WIN
+-- 
+2.39.5
+
