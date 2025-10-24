@@ -21,7 +21,7 @@ powerful cross-language analyses, including:
 
 ## Table of Contents
 - [Requirements](#requirements)
-- [Install from Source](#build_from_source)
+- [Build/Install from Source](#build_from_source)
   - [Gasket](#build_from_source)
   - [Deno (w/ Gasket patch)](#build_deno_from_source)
   - [Docker Image](#build_docker_from_source)
@@ -44,7 +44,7 @@ powerful cross-language analyses, including:
 
 <a name="install_source"/>
 
-# Build and Install Gasket From Source
+# Install Gasket From Source
 > These instructions assume building on Debian-based system.
 1. Clone this repository:
 ```
