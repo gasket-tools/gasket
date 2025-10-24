@@ -112,7 +112,7 @@ See [docs/docker-build.md](docs/docker-build.md) for instructions.
 
 <a name="usage_node"/>
 
-# Usage (Node.js)
+## Usage (Node.js)
 The `gasket` executable provides a command-line interface that allows you
 to analyze a given *installed* `npm` package
 and identify its bridges:
@@ -257,7 +257,7 @@ containing the following information:
 ```
 <a name="usage_deno"/>
 
-# Usage (Deno)
+##  Usage (Deno)
 1. Fetch the source code of the package you want to analyze (e.g., `@db/sqlite`):
 > Packages on deno.land/jsr.io contain links to the corresponding source code repositories.
 ```
@@ -271,7 +271,7 @@ gasket-deno -r deno-sqlite3 -o deno-bridges.json
 
 <a name="optional_arguments"/>
 
-## Optional Arguments
+# Optional Arguments
 ### 1. Native-only Analysis (`--native-only`):
 
 Only analyze `.node` native extension modules
