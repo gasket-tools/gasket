@@ -20,32 +20,28 @@ powerful cross-language analyses, including:
 
 
 ## Table of Contents
-- [Features](#features)
-- [Key Idea](#key_idea)
-- [Supported GPUs](#supported_gpus)
-- [Overview](#overview)
-  - [`nvshare` components](#components)
-  - [Some Details on `nvshare-scheduler`](#details_scheduler)
-  - [Memory Oversubscription For a Single Process](#single_oversub)
-  - [The Scheduler's Time Quantum (TQ)](#scheduler_tq)
-- [Further Reading](#further_reading)
-- [Deploy on a Local System](#deploy_local)
-  - [Installation (Local)](#installation_local)
-  - [Usage (Local)](#usage_local)
-  - [Test (Local)](#test_local)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [npm](#install_npm)
+  - [Docker image](#install_docker)
+- [Usage (Node.js)](#overview)
+- [Usage (Deno)](#overview)
+- [Optional Arguments](#optional_arguments)
+- [Build/Install from Source](#build_from_source)
+  - [Gasket](#build_from_source)
+  - [Deno (w/ Gasket patch)](#build_deno_from_source)
+  - [Docker Image](#build_docker_from_source)
+- [Related Publications](#related_publications)
 
 # Requirements
 - Node.js >= 21.x
 - g++
-
-# Getting Started
-
-TBD
+- Deno >=1.46.x (with Gasket patch, see below)
 
 # Installation
 
+<a name="install_npm"/>
 ## npm package + Deno binary
-> Unless using our Docker image
 1. Install Gasket's npm package
 ```
 npm install @gasket-tools/gasket
@@ -61,6 +57,7 @@ npm install @gasket-tools/gasket
 ... (releases github)
 ```
 
+<a name="install_docker"/>
 ## Docker
 ### Use our pre-built Docker image that has Gasket preinstalled:
 ```
@@ -72,7 +69,8 @@ docker pull ...
 docker run ...
 ```
 
-## Build and Install Gasket From Source
+<a name="build_from_source"/>
+# Build and Install Gasket From Source
 > These instructions assume building on Debian-based system.
 1. Clone this repository:
 ```
@@ -86,20 +84,23 @@ git clone https://github.com/gasket-tools/gasket.git
 npm install
 ```
 
-3. (Option A) Download and Install a Precompiled Deno binary:
+3. (Recommended: Option A) Download and Install a Precompiled Deno Binary (w/ Gasket patch):
 ```
 ...
 ```
 
 4. (Option B) [Build Deno from Source](#build-and-install-deno-from-source)
 
+<a name="build_deno_from_source"/>
 ## Build and Install Deno (w/ Gasket patch) from Source
 
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
+<a name="build_docker_from_source"/>
 ## Build Docker Image From Source
 See [docs/docker-build.md](docs/docker-build.md) for instructions.
 
+<a name="usage_node"/>
 # Usage (Node.js)
 The `gasket` executable provides a command-line interface that allows you
 to analyze a given *installed* `npm` package
@@ -122,7 +123,7 @@ Options:
       --help          Show help                                      [boolean]
 
 ```
-
+<a name="analyze_nodejs"/>
 ### Analyze a Node.js Package
 1. (Optional) Install the target package from npm into a 
 > Replace \<dir> and \<pkg> with your desired package name.
@@ -242,7 +243,7 @@ containing the following information:
     },
 ...
 ```
-
+<a name="usage_deno"/>
 # Usage (Deno)
 1. Fetch the source code of the package you want to analyze (e.g., `@db/sqlite`):
 > Packages on deno.land/jsr.io contain links to the corresponding source code repositories.
@@ -255,7 +256,7 @@ git clone https://github.com/denodrivers/sqlite3 deno-sqlite3
 gasket-deno -r deno-sqlite3 -o deno-bridges.json
 ```
 
-
+<a name="optional_arguments"/>
 ## Optional Arguments
 ### 1. Native-only Analysis (`--native-only`):
 
@@ -295,26 +296,10 @@ you can run:
 gasket -m fs --internal -o fs_bridges.json
 ```
 
+<a name="related_publications"/>
 # Related Publications
 
-* Georgios Alexopoulos\*, Thodoris Sotiropoulos\*, Zhendong Su, and Dimitris Mitropoulos.
+* Georgios Alexopoulos, Thodoris Sotiropoulos, Zhendong Su, and Dimitris Mitropoulos.
 [Best of Both Worlds: Effective Foreign Bridge Identification in V8 Embedders for Security Analysis](https://grgalex.gr/assets/pdf/gasket_sp26.pdf).
 In Proceedings of the 2026 IEEE Symposium on Security and Privacy (S&P'26). IEEE, 2026.
 To appear.
-
-### BiBTeX entry:
-```
-@inproceedings{gasket,
-abbr={IEEE S\&P'26},
-author = {Georgios Alexopoulos and Thodoris Sotiropoulos and Zhendong Su and Dimitris Mitropoulos},
-title = {Best of Both Worlds: Effective Foreign Bridge Identification in V8 Embedders for Security Analysis},
-booktitle = {2026 IEEE Symposium on Security and Privacy},
-series = {S\&P'26},
-year = {2026},
-publisher = {IEEE},
-coauthors = {Georgios Alexopoulos and Thodoris Sotiropoulos},
-selected={true},
-pdf = {https://grgalex.gr/assets/pdf/gasket_sp26.pdf},
-note = {To appear.}
-}
-```
