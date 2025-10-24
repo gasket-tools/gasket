@@ -24,8 +24,9 @@ powerful cross-language analyses, including:
 - [Installation](#installation)
   - [npm](#install_npm)
   - [Docker image](#install_docker)
-- [Usage (Node.js)](#overview)
-- [Usage (Deno)](#overview)
+- [Usage](#usage)
+  - [Node.js](#usage_node)
+  - [Deno](#usage_deno)
 - [Optional Arguments](#optional_arguments)
 - [Build/Install from Source](#build_from_source)
   - [Gasket](#build_from_source)
@@ -104,6 +105,10 @@ See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
 ## Build Docker Image From Source
 See [docs/docker-build.md](docs/docker-build.md) for instructions.
+
+<a name="usage"/>
+
+# Usage
 
 <a name="usage_node"/>
 
