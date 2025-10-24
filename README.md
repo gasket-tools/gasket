@@ -69,8 +69,6 @@ export GASKET_ROOT=/gasket
 ...
 ```
 
-<a name="build_deno_from_source"/>
-
 5. (Option B) Build and Install Deno (w/ Gasket patch) from Source:
 
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
@@ -121,6 +119,7 @@ Options:
       --help          Show help                                      [boolean]
 
 ```
+
 <a name="analyze_nodejs"/>
 
 ### Analyze a Node.js Package
@@ -242,6 +241,7 @@ containing the following information:
     },
 ...
 ```
+
 <a name="usage_deno"/>
 
 ##  Usage (Deno)
