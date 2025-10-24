@@ -21,60 +21,28 @@ powerful cross-language analyses, including:
 
 ## Table of Contents
 - [Requirements](#requirements)
-- [Installation](#installation)
-  - [npm](#install_npm)
-  - [Docker image](#install_docker)
+- [Install from Source](#build_from_source)
+  - [Gasket](#build_from_source)
+  - [Deno (w/ Gasket patch)](#build_deno_from_source)
+  - [Docker Image](#build_docker_from_source)
+- [Use a Pre-built Docker Image](#install_docker)
+- [Build Docker Image From Source](#build_docker_from_source)
 - [Usage](#usage)
   - [Node.js](#usage_node)
   - [Deno](#usage_deno)
 - [Optional Arguments](#optional_arguments)
-- [Build/Install from Source](#build_from_source)
-  - [Gasket](#build_from_source)
-  - [Deno (w/ Gasket patch)](#build_deno_from_source)
-  - [Docker Image](#build_docker_from_source)
 - [Related Publications](#related_publications)
 
 # Requirements
 - Node.js >= 21.x
 - g++
+- GNU Debugger (GDB)
+- sudo
+- Git
+- make
 - Deno >=1.46.x (with Gasket patch, see below)
 
-<a name="installation"/>
-
-# Installation
-
-<a name="install_npm"/>
-
-## npm
-1. Install Gasket's npm package
-```
-npm install @gasket-tools/gasket
-```
-
-2. Download a prebuilt Deno binary with our patches applied:
-```
-... (releases github)
-```
-
-3. Install the custom Deno binary:
-```
-... (releases github)
-```
-
-<a name="install_docker"/>
-
-## Docker
-### Use our pre-built Docker image that has Gasket preinstalled:
-```
-docker pull ...
-```
-
-### Run a container using Gasket's Docker Image:
-```
-docker run ...
-```
-
-<a name="build_from_source"/>
+<a name="install_source"/>
 
 # Build and Install Gasket From Source
 > These instructions assume building on Debian-based system.
@@ -90,16 +58,20 @@ git clone https://github.com/gasket-tools/gasket.git
 npm install
 ```
 
-3. (Recommended: Option A) Download and Install a Precompiled Deno Binary (w/ Gasket patch):
+3. Set the `GASKET_ROOT` environment variable to the root of Gasket's repository:
+> Replace `/gasket` with the path to Gasket's source directory on your machine.
+```
+export GASKET_ROOT=/gasket
+```
+
+4. (Recommended: Option A) Download and Install a Precompiled Deno Binary (w/ Gasket patch):
 ```
 ...
 ```
 
-4. (Option B) [Build Deno from Source](#build-and-install-deno-from-source)
-
 <a name="build_deno_from_source"/>
 
-## Build and Install Deno (w/ Gasket patch) from Source
+5. (Option B) Build and Install Deno (w/ Gasket patch) from Source:
 
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
@@ -107,6 +79,19 @@ See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
 ## Build Docker Image From Source
 See [docs/docker-build.md](docs/docker-build.md) for instructions.
+
+<a name="install_docker"/>
+
+# Use a Pre-built Docker Image
+### Use our pre-built Docker image that has Gasket preinstalled:
+```
+docker pull ...
+```
+
+### Run a container using Gasket's Docker Image:
+```
+docker run ...
+```
 
 <a name="usage"/>
 
