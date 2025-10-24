@@ -1,4 +1,4 @@
-![Node.js Version](docs/nodejs-version-badge.csv)
+![Node.js Version](docs/nodejs-version-badge.svg)
 
 # Gasket
 
