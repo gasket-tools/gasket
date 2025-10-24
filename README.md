@@ -35,11 +35,8 @@ powerful cross-language analyses, including:
 
 # Requirements
 - Node.js >= 21.x
-- g++
+- g++, make, sudo, git
 - GNU Debugger (GDB)
-- sudo
-- Git
-- make
 - Deno >=1.46.x (with Gasket patch, see below)
 
 <a name="install_source"/>
@@ -55,13 +52,13 @@ git clone https://github.com/gasket-tools/gasket.git
 > Gasket's source code is organized as an npm package, and running `npm install` will also
 > trigger compilation of Gasket's C++ backend.
 ```
-npm install
+cd gasket && npm install
 ```
 
 3. Set the `GASKET_ROOT` environment variable to the root of Gasket's repository:
-> Replace `/gasket` with the path to Gasket's source directory on your machine.
+> This assumes the current directory is Gasket's git repository from step (1). 
 ```
-export GASKET_ROOT=/gasket
+export GASKET_ROOT=$(pwd)
 ```
 
 4. (Recommended: Option A) Download and Install a Precompiled Deno Binary (w/ Gasket patch):
