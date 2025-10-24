@@ -41,6 +41,7 @@ powerful cross-language analyses, including:
 # Installation
 
 <a name="install_npm"/>
+
 ## npm package + Deno binary
 1. Install Gasket's npm package
 ```
@@ -58,6 +59,7 @@ npm install @gasket-tools/gasket
 ```
 
 <a name="install_docker"/>
+
 ## Docker
 ### Use our pre-built Docker image that has Gasket preinstalled:
 ```
@@ -70,6 +72,7 @@ docker run ...
 ```
 
 <a name="build_from_source"/>
+
 # Build and Install Gasket From Source
 > These instructions assume building on Debian-based system.
 1. Clone this repository:
@@ -92,15 +95,18 @@ npm install
 4. (Option B) [Build Deno from Source](#build-and-install-deno-from-source)
 
 <a name="build_deno_from_source"/>
+
 ## Build and Install Deno (w/ Gasket patch) from Source
 
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
 <a name="build_docker_from_source"/>
+
 ## Build Docker Image From Source
 See [docs/docker-build.md](docs/docker-build.md) for instructions.
 
 <a name="usage_node"/>
+
 # Usage (Node.js)
 The `gasket` executable provides a command-line interface that allows you
 to analyze a given *installed* `npm` package
@@ -124,6 +130,7 @@ Options:
 
 ```
 <a name="analyze_nodejs"/>
+
 ### Analyze a Node.js Package
 1. (Optional) Install the target package from npm into a 
 > Replace \<dir> and \<pkg> with your desired package name.
@@ -244,6 +251,7 @@ containing the following information:
 ...
 ```
 <a name="usage_deno"/>
+
 # Usage (Deno)
 1. Fetch the source code of the package you want to analyze (e.g., `@db/sqlite`):
 > Packages on deno.land/jsr.io contain links to the corresponding source code repositories.
@@ -257,6 +265,7 @@ gasket-deno -r deno-sqlite3 -o deno-bridges.json
 ```
 
 <a name="optional_arguments"/>
+
 ## Optional Arguments
 ### 1. Native-only Analysis (`--native-only`):
 
@@ -297,6 +306,7 @@ gasket -m fs --internal -o fs_bridges.json
 ```
 
 <a name="related_publications"/>
+
 # Related Publications
 
 * Georgios Alexopoulos, Thodoris Sotiropoulos, Zhendong Su, and Dimitris Mitropoulos.
