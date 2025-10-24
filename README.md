@@ -49,6 +49,7 @@ TBD
 ```
 npm install @gasket-tools/gasket
 ```
+
 2. Download a prebuilt Deno binary with our patches applied:
 ```
 ... (releases github)
@@ -70,7 +71,7 @@ docker pull ...
 docker run ...
 ```
 
-## Install from source
+## Build and Install Gasket From Source
 > These instructions assume building on Debian-based system.
 1. Clone this repository:
 ```
@@ -81,29 +82,22 @@ git clone https://github.com/gasket-tools/gasket.git
 > Gasket's source code is organized as an npm package, and running `npm install` will also
 > trigger compilation of Gasket's C++ backend.
 ```
-npm install && npm link
+npm install
 ```
 
-3. (Option A) Build and install Deno with the minor patch required by Gasket:
+3. (Option A) Download and Install a Precompiled Deno binary:
 ```
 ...
 ```
 
-4. (Option B) Download and Install a Precompiled Deno binary:
-```
-...
-```
+4. (Option B) [Build Deno from Source](#build-and-install-deno-from-source)
+
+## Build and Install Deno from Source
+
+See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
 ## Build Docker Image From Source
-1. Clone this repository:
-```
-git clone https://github.com/gasket-tools/gasket.git
-```
-2. Build the image:
-```
-docker build ...
-```
-
+See [docs/docker-build.md](docs/docker-build.md) for instructions.
 
 # Usage (Node.js)
 The `gasket` executable provides a command-line interface that allows you
