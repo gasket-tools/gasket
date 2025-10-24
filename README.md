@@ -44,7 +44,7 @@ powerful cross-language analyses, including:
 # Installation
 <a name="install_npm"/>
 
-## npm package + Deno binary
+## npm
 1. Install Gasket's npm package
 ```
 npm install @gasket-tools/gasket
