@@ -294,3 +294,27 @@ you can run:
 ```bash
 gasket -m fs --internal -o fs_bridges.json
 ```
+
+# Related Publications
+
+* Georgios Alexopoulos\*, Thodoris Sotiropoulos\*, Zhendong Su, and Dimitris Mitropoulos.
+[Best of Both Worlds: Effective Foreign Bridge Identification in V8 Embedders for Security Analysis](https://grgalex.gr/assets/pdf/gasket_sp26.pdf).
+In Proceedings of the 2026 IEEE Symposium on Security and Privacy (S&P'26). IEEE, 2026.
+To appear.
+
+### BiBTeX entry:
+```
+@inproceedings{gasket,
+abbr={IEEE S\&P'26},
+author = {Georgios Alexopoulos and Thodoris Sotiropoulos and Zhendong Su and Dimitris Mitropoulos},
+title = {Best of Both Worlds: Effective Foreign Bridge Identification in V8 Embedders for Security Analysis},
+booktitle = {2026 IEEE Symposium on Security and Privacy},
+series = {S\&P'26},
+year = {2026},
+publisher = {IEEE},
+coauthors = {Georgios Alexopoulos and Thodoris Sotiropoulos},
+selected={true},
+pdf = {https://grgalex.gr/assets/pdf/gasket_sp26.pdf},
+note = {To appear.}
+}
+```

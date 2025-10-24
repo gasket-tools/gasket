@@ -73,8 +73,7 @@ cd ..
 export PATH="$(pwd)/deno/target/debug:$PATH"
 ```
 
-### 14. Ensure Deno is installed correctly:
+### 14. Ensure our custom version of Deno has priority in `$PATH`:
 ```
-deno --version
+which deno
 ```
-
