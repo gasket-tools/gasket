@@ -1,4 +1,5 @@
 ![Node.js Version](docs/nodejs-version-badge.svg)
+![Deno Version](docs/deno-version-badge.svg)
 
 # Gasket
 
