@@ -39,8 +39,9 @@ powerful cross-language analyses, including:
 - g++
 - Deno >=1.46.x (with Gasket patch, see below)
 
-# Installation
+<a name="installation"/>
 
+# Installation
 <a name="install_npm"/>
 
 ## npm package + Deno binary
