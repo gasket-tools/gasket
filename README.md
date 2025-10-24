@@ -1,4 +1,4 @@
-![Node.js Version](https://img.shields.io/badge/Node.js-%3E%3D21.x-brightgreen)
+![Node.js Version](docs/nodejs-version-badge.csv)
 
 # Gasket
 
@@ -92,7 +92,7 @@ npm install
 
 4. (Option B) [Build Deno from Source](#build-and-install-deno-from-source)
 
-## Build and Install Deno from Source
+## Build and Install Deno (w/ Gasket patch) from Source
 
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
