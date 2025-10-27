@@ -25,7 +25,7 @@ powerful cross-language analyses, including:
   - [Gasket](#build_from_source)
   - [Deno (w/ Gasket patch)](#build_deno_from_source)
   - [Docker Image](#build_docker_from_source)
-- [Use a Pre-built Docker Image](#install_docker)
+- [Use a Prebuilt Docker Image](#install_docker)
 - [Build Docker Image From Source](#build_docker_from_source)
 - [Usage](#usage)
   - [Node.js](#usage_node)
@@ -83,8 +83,8 @@ See [docs/docker-build.md](docs/docker-build.md) for instructions.
 
 <a name="install_docker"/>
 
-# Use a Pre-built Docker Image
-### Use our pre-built Docker image that has Gasket preinstalled:
+# Use a Prebuilt Docker Image
+### Use our prebuilt Docker image with Gasket installed:
 ```
 docker pull grgalex/gasket:0.1.0
 ```
@@ -127,7 +127,7 @@ Options:
 <a name="analyze_nodejs"/>
 
 ### Analyze a Node.js Package
-1. (Optional) Install the target package from npm into a 
+1. (Optional) Install the target package from npm into a temporary directory:
 > Replace \<dir> and \<pkg> with your desired directory and package name.
 ```
 npm install --prefix <dir> <pkg>
@@ -137,7 +137,7 @@ For example, to install the `sqlite3` package in `/tmp`, run:
 ```
 npm install --prefix /tmp sqlite3
 ```
-2. Run Gasket
+2. Run Gasket:
 > In default mode, this will search for both Native and WASM bridges.
 ```
 gasket -r <dir>/node_modules/<package> -o bridges.json
@@ -249,7 +249,7 @@ containing the following information:
 <a name="usage_deno"/>
 
 ## Deno
-> `gasket-deno` requires having a `deno` binary with Gasket's patches available in $PATH.
+> `gasket-deno` requires a `deno` binary with Gasket's patches available in $PATH.
 
 1. Fetch the source code of the package you want to analyze (e.g., `@db/sqlite`):
 > Packages on deno.land/jsr.io contain links to the corresponding source code repositories.
