@@ -66,7 +66,7 @@ export GASKET_ROOT=$(pwd)
 
 4. (Recommended: Option A) Download and Install a Precompiled Deno Binary (w/ Gasket patch):
 ```
-wget https://github.com/gasket-tools/gasket/releases/download/v0.1.0/deno-gasket-x86_64-unknown-linux-gnu.zip && \
+wget https://github.com/gasket-tools/gasket/releases/download/0.1.0/deno-gasket-x86_64-unknown-linux-gnu.zip && \
 unzip deno-gasket-x86_64-unknown-linux-gnu.zip && \
 sudo mv deno /usr/local/bin/deno && \
 rm deno-gasket-x86_64-unknown-linux-gnu.zip
