@@ -41,10 +41,6 @@ if (process.env.GASKET_ROOT) {
     "scripts/get_loaded_libs.py",
   );
 } else {
-  // console.error(
-  //   "The GASKET_ROOT environment variable is not set. Set it to the root of the cloned Gasket source code repository.",
-  // );
-  // process.exit(1);
   globalThis.RESOLVE_SCRIPT_PATH = 'resolve-syms'
   globalThis.GET_LOADED_LIBS_SCRIPT_PATH = 'get-loaded-libs'
 }
@@ -217,7 +213,6 @@ function gdb_resolve(addresses) {
   fs.writeFileSync(addr_file, JSON.stringify(addresses, null, 2));
 
   var args = [
-    RESOLVE_SCRIPT_PATH,
     "-p",
     String(pid),
     "-i",
@@ -226,7 +221,7 @@ function gdb_resolve(addresses) {
     res_file,
   ];
 
-  var result = spawnSync("python3", args, { encoding: "utf-8" });
+  var result = spawnSync(RESOLVE_SCRIPT_PATH, args, { encoding: "utf-8" });
   const out = result.stdout;
   // console.log('OUT:')
   // console.log(out)
@@ -248,9 +243,9 @@ function get_loaded_libs() {
 
   var pid = process.pid;
 
-  var args = [GET_LOADED_LIBS_SCRIPT_PATH, "-p", String(pid), "-o", res_file];
+  var args = ["-p", String(pid), "-o", res_file];
 
-  var result = spawnSync("python3", args, { encoding: "utf-8" });
+  var result = spawnSync(GET_LOADED_LIBS_SCRIPT_PATH, args, { encoding: "utf-8" });
   const out = result.stdout;
   console.log("OUT:");
   console.log(out);

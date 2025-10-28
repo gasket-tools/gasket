@@ -58,13 +58,7 @@ git clone https://github.com/gasket-tools/gasket.git
 cd gasket && npm install && npm install -g
 ```
 
-3. Set the `GASKET_ROOT` environment variable to the root of Gasket's repository:
-> This assumes the current directory is Gasket's git repository from step (1). 
-```
-export GASKET_ROOT=$(pwd)
-```
-
-4. (Recommended: Option A) Download and Install a Precompiled Deno Binary (w/ Gasket patch):
+3. (Recommended: Option A) Download and Install a Precompiled Deno Binary (w/ Gasket patch):
 ```
 wget https://github.com/gasket-tools/gasket/releases/download/0.1.0/deno-gasket-x86_64-unknown-linux-gnu.zip && \
 unzip deno-gasket-x86_64-unknown-linux-gnu.zip && \
@@ -72,7 +66,7 @@ sudo mv deno /usr/local/bin/deno && \
 rm deno-gasket-x86_64-unknown-linux-gnu.zip
 ```
 
-5. (Option B) Build and Install Deno (w/ Gasket patch) from Source:
+3. (Option B) Build and Install Deno (w/ Gasket patch) from Source:
 
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
 

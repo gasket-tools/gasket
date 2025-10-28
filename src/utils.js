@@ -11,11 +11,6 @@ if (process.env.GASKET_ROOT) {
     "scripts/resolve_syms.py",
   );
 } else {
-  // console.error(
-  //   "The GASKET_ROOT environment variable is not set. Set it to the root of the cloned Gasket source code repository.",
-  // );
-  // process.exit(1);
-  // TODO: Work without GASKET_ROOT in a graceful way.
   RESOLVE_SCRIPT_PATH = 'resolve-syms'
 }
 
@@ -42,7 +37,6 @@ export function resolveGDB(addresses) {
   // var cmd = `bash -c 'python3 ${RESOLVE_SCRIPT_PATH} -p ${pid} \
   //   -i ${addrFile} -o ${resFile}'`
   const args = [
-    RESOLVE_SCRIPT_PATH,
     "-p",
     String(pid),
     "-i",
@@ -51,7 +45,7 @@ export function resolveGDB(addresses) {
     resFile,
   ];
 
-  var result = spawnSync("python3", args, { encoding: "utf-8" });
+  var result = spawnSync(RESOLVE_SCRIPT_PATH, args, { encoding: "utf-8" });
   const out = result.stdout;
   console.log("OUT:");
   console.log(out);

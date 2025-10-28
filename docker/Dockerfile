@@ -88,5 +88,4 @@ COPY --from=deno-builder /tmp/deno/target/debug/deno /usr/local/bin/deno
 # --- Final user ---
 USER gasket
 ENV PATH="$HOME/.npm-global/bin:$HOME/.cargo/bin:$PATH"
-ENV GASKET_ROOT=/home/gasket/gasket
 WORKDIR $HOME
