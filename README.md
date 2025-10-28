@@ -21,30 +21,24 @@ powerful cross-language analyses, including:
 
 ## Table of Contents
 - [Requirements](#requirements)
-- [Build/Install from Source](#build_from_source)
-  - [Gasket](#build_from_source)
-  - [Deno (w/ Gasket patch)](#build_deno_from_source)
-  - [Docker Image](#build_docker_from_source)
-- [Use a Prebuilt Docker Image](#install_docker)
-- [Build Docker Image From Source](#build_docker_from_source)
+- [Build/Install from Source](#install-gasket-from-source)
+  - [Gasket](#install-gasket-from-source)
+  - [Deno (w/ Gasket patch)](#install-gasket-from-source)
+- [Use a Prebuilt Docker Image](#use-a-prebuilt-docker-image)
+- [Build Docker Image From Source](#build-docker-image-from-source)
 - [Usage](#usage)
-  - [Node.js](#usage_node)
-  - [Deno](#usage_deno)
-- [Optional Arguments](#optional_arguments)
-- [Related Publications](#related_publications)
+  - [Node.js](#nodejs)
+  - [Deno](#deno)
+- [Optional Arguments](#optional-arguments)
+- [Related Publications](#related-publications)
 
-# Requirements
-- Node.js >= 21.x
+## Requirements
+- Node.js >= 21.x, Deno >=1.46.x (with Gasket patch, see below)
 - unzip (for installing precompiled deno)
-- g++, make, sudo, git
+- git, sudo, make, g++, c++filt, GNU Debugger (GDB)
 - wasm-objdump (offered by the wabt package on Debian)
-- c++filt
-- GNU Debugger (GDB)
-- Deno >=1.46.x (with Gasket patch, see below)
 
-<a name="install_source"/>
-
-# Install Gasket From Source
+## Install Gasket From Source
 > These instructions assume building on Debian-based system.
 1. Clone this repository:
 ```
@@ -70,14 +64,7 @@ rm deno-gasket-x86_64-unknown-linux-gnu.zip
 
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
-<a name="build_docker_from_source"/>
-
-## Build Docker Image From Source
-See [docs/docker-build.md](docs/docker-build.md) for instructions.
-
-<a name="install_docker"/>
-
-# Use a Prebuilt Docker Image
+## Use a Prebuilt Docker Image
 ### Use our prebuilt Docker image with Gasket installed:
 ```
 docker pull grgalex/gasket:0.1.0
@@ -89,11 +76,24 @@ docker pull grgalex/gasket:0.1.0
 docker run -ti --cap-add=SYS_PTRACE grgalex/gasket:0.1.0
 ```
 
-<a name="usage"/>
+## Build Docker Image From Source
+1. Clone the Gasket source code repository:
+```
+git clone https://github.com/gasket-tools/gasket.git
+```
+
+2. Build the Docker image:
+```
+docker build -t gasket-wip -f docker/Dockerfile .
+```
+
+3. Run a container using the image:
+> The `cap-add=SYS_PTRACE` is necessary to allow Gasket to use GDB inside the container.
+```
+docker run -ti --cap-add=SYS_PTRACE gasket-wip
+```
 
 # Usage
-
-<a name="usage_node"/>
 
 ## Node.js
 The `gasket` executable provides a command-line interface that allows you
@@ -117,8 +117,6 @@ Options:
       --help          Show help                                      [boolean]
 
 ```
-
-<a name="analyze_nodejs"/>
 
 ### Analyze a Node.js Package
 1. (Optional) Install the target package from npm into a temporary directory:
@@ -240,8 +238,6 @@ containing the following information:
 ...
 ```
 
-<a name="usage_deno"/>
-
 ## Deno
 > `gasket-deno` requires a `deno` binary with Gasket's patches available in $PATH.
 
@@ -261,9 +257,7 @@ cd deno-sqlite3
 gasket-deno -r . -o deno-bridges.json
 ```
 
-<a name="optional_arguments"/>
-
-# Optional Arguments
+## Optional Arguments
 ### 1. Native-only Analysis (`--native-only`):
 
 Only analyze `.node` native extension modules
@@ -302,9 +296,7 @@ you can run:
 gasket -m fs --internal -o fs_bridges.json
 ```
 
-<a name="related_publications"/>
-
-# Related Publications
+## Related Publications
 
 * Georgios Alexopoulos, Thodoris Sotiropoulos, Zhendong Su, and Dimitris Mitropoulos.
 [Best of Both Worlds: Effective Foreign Bridge Identification in V8 Embedders for Security Analysis](https://grgalex.gr/assets/pdf/gasket_sp26.pdf).
