@@ -34,7 +34,7 @@ powerful cross-language analyses, including:
 
 ## Requirements
 - Node.js >= 21.x, Deno >=1.46.x (with Gasket patch, see below)
-- unzip (for installing precompiled deno)
+- wget, unzip (for installing precompiled deno)
 - git, sudo, make, g++, c++filt, GNU Debugger (GDB)
 - wasm-objdump (offered by the wabt package on Debian)
 
