@@ -232,7 +232,7 @@ containing the following information:
     {
       "type": "js-to-wasm",
       "jsname": "tiny-secp256k1/lib/wasm_loader.default.initializeContext",
-      "cfunc": "/tmp/t88/node_modules/tiny-secp256k1/lib/secp256k1.wasm",
+      "cfunc": "initializeContext",
       "library": "/tmp/t88/node_modules/tiny-secp256k1/lib/secp256k1.wasm"
     },
 ...

@@ -421,7 +421,7 @@ class OLAAnalysis {
     const res = this.resolve_wasm();
     for (const fqn of Object.keys(res.fqn2wasmfunc)) {
       const lib = res.fqn2wasmfile[fqn];
-      this.addBridge(fqn, res.fqn2wasmfile[fqn], lib, BridgeType.WASM);
+      this.addBridge(fqn, res.fqn2wasmfunc[fqn], lib, BridgeType.WASM);
     }
     this.stats["ambiguous"] = res.ambiguous;
     this.stats["unresolved"] = res.unresolved;
