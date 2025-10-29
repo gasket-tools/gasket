@@ -65,12 +65,12 @@ rm deno-gasket-x86_64-unknown-linux-gnu.zip
 See [docs/deno-build.md](docs/deno-build.md) for instructions.
 
 ## Use a Prebuilt Docker Image
-### Use our prebuilt Docker image with Gasket installed:
+1. Download the prebuilt Docker image with Gasket installed:
 ```
 docker pull grgalex/gasket:0.1.0
 ```
 
-### Run a container using Gasket's Docker Image:
+2. Run a container using Gasket's Docker image:
 > The `cap-add=SYS_PTRACE` is necessary to allow Gasket to use GDB inside the container.
 ```
 docker run -ti --cap-add=SYS_PTRACE grgalex/gasket:0.1.0
