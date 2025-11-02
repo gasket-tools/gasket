@@ -145,7 +145,7 @@ Gasket stores its results in a JSON file that includes the following information
 
 * `objects_examined`: Number of objects examined by `Gasket`.
 * `callable_objects`: Number of callable callable objects examined by `Gasket`.
-* `foreign_callbable_objects`: Number of callable objects.
+* `foreign_callable_objects`: Number of callable objects.
 with a foreign implementation (e.g., an implementation in C++).
 * `duration`: Time in seconds spent analyzing the given package.
 * `count`: Number of identified bridges.
