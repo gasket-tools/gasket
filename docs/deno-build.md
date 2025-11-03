@@ -57,7 +57,7 @@ git -C rusty_v8/v8 am -3 ${GASKET_ROOT?}/deno-patches/rusty_v8/0001-visibility-p
 ```
 curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 source ${HOME}/.cargo/env && \
-sudo apt install protobuf-compire cmake clang pkg-config libglib2.0-dev libgtk-3-dev -y
+sudo apt install protobuf-compile cmake clang pkg-config libglib2.0-dev libgtk-3-dev -y
 ```
 
 ### 12. Build Deno from source:
